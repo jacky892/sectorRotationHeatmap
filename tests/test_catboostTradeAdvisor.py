@@ -15,7 +15,7 @@ sys.path.append('..')
 class TestClass(unittest.TestCase):
     def test_catboost_advisor(self):
         from datalib.heatmapUtil import get_rel_nday_ma_zscore_heatmap
-        from sectorRotationTraderWorkflow import batch_sector_rotation_learning
+        from worflow.sectorRotationTraderWorkflow import batch_sector_rotation_learning
         from backtest.chandelierExitBacktester import chandelierExitBacktester, backtest_between, get_long_max_drawdown_details
         from backtest.chandelierExitBacktester import commonUtil as cu
         import pandas as pd
