@@ -7,7 +7,6 @@ logger.setLevel(logging.INFO)
 def log(msg):
     logger.info(msg)
     
-print('abcd')
 class TestClass(unittest.TestCase):
     def test_rank_heatmap(self):
         import os
