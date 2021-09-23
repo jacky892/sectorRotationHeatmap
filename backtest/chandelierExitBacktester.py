@@ -605,7 +605,7 @@ class chandelierExitBacktester:
         if no entry_date but has signal_date, it will create entry_date column with signal_date+1 trading day
         note that no matter long of short, signal>0 mean exit, which is already accounted for in get_chandelier_long_exit_signal
         '''
-        #import pandas_ta
+        import pandas_ta
         data_rows=defaultdict()
 
 #        ret_df=pd.DataFrame()
