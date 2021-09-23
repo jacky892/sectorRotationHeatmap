@@ -3,6 +3,47 @@
     default stop loss def_stop_pct and focus_etf_list to get training results '''
 from datalib.catboostTradeAdvisor import catboostTradeAdvisor
 from backtest.chandelierExitBacktester import dlog
+
+def get_us_etf_list()->tuple:
+    #    ew_sector_etf_list=['RCD', 'RYH', 'RYT', 'RGI', 'RHS', 'RTM', 'RYF', 'ROOF', 'RSP', 'RYE', 'EQAL', 'EWRE', 'QQEW', 'XBI', 'XAR', 'ROBO','TLT', 'EMLC', 'EEM', 'CURE', 'VXX', 'REM']
+    ew_sector_etf_list=['RCD', 'RYH', 'RYT', 'RGI', 'RHS', 'RTM', 'RYF', 'RSP', 'RYE', 'RYU', 'EQAL', 'EWRE', 'QQEW', 'TLT', 'EMLC', 'EEM' ]
+    feat_cols=['TLT', 'EQAL', 'RYF', 'EMLC', 'EWRE', 'RTM', 'RYE', 'EEM', 'RYT', 'RYU', 'RHS']
+    return ew_sector_etf_list, feat_cols
+
+def get_jp_etf_list()->tuple:
+    '''
+    return etf_list and feat_tickers
+    1634 Daiwa ETF・TOPIX-17 FOODS
+    1635 Daiwa ETF・TOPIX-17 ENERGY RESOURCES
+    1636 Daiwa ETF・TOPIX-17 CONSTRUCTION & MATERIALS
+    1637 Daiwa ETF・TOPIX-17 RAW MATERIALS & CHEMICALS
+    1638 Daiwa ETF・TOPIX-17 PHARMACEUTICAL
+    1639 Daiwa ETF・TOPIX-17 AUTOMOBILES & TRANSPORTATION EQUIPMENT
+    1640 Daiwa ETF・TOPIX-17 STEEL & NONFERROUS METALS
+    1641 Daiwa ETF・TOPIX-17 MACHINERY
+    1642 Daiwa ETF・TOPIX-17 ELECTRIC APPLIANCES & PRECISION INSTRUMENTS
+    1643 Daiwa ETF・TOPIX-17 IT & SERVICES, OTHERS
+    1644 Daiwa ETF・TOPIX-17 ELECTRIC POWER & GAS
+    1645 Daiwa ETF・TOPIX-17 TRANSPORTATION & LOGISTICS
+    1646 Daiwa ETF・TOPIX-17 COMMERCIAL & WHOLESALE TRADE
+    1647 Daiwa ETF・TOPIX-17 RETAIL TRADE
+    1648 Daiwa ETF・TOPIX-17 BANKS
+    1649 Daiwa ETF・TOPIX-17 FINANCIALS（EX BANKS
+    1650 Daiwa ETF・TOPIX-17 REAL ESTATE
+    1314 Listed Index Fund S&P Japan Emerging Equity 100
+    1316 Listed Index Fund TOPIX100 Japan Large Cap Equity
+    1317 Listed Index Fund TOPIX Mid400 Japan Mid Cap Equity
+    1318 Listed Index Fund TOPIX Small Japan Small Cap Equity
+    1319 Nikkei 300
+    1322 Listed Index Fund China A Share (Panda) CSI300
+    '''
+    etf_list=[ '1314.t', '1316.t', '1317.t', '1318.t', '1319.t', '1322.t',
+            '1634.t', '1635.t', '1636.t', '1637.t', '1639.t', '1640.t', '1641.t', '1642.t', 
+                '1643.t', '1644.t', '1645.t', '1646.t', '1647.t', '1648.t', '1649.t', '1650.t', 'TLT']
+    feat_cols=['TLT', '1635.t', '1638.t', '1639.t', '1644.t', '1645.t', '1648.t', '1650.t', '1316.t' , '1314.t', '1317t.', '1322.t']
+
+    return etf_list, feat_cols
+
 def batch_sector_rotation_learning(rank_df, focus_etf_list=['CURE', 'TECL'], th=0.08,
             def_pct_stop=0.1, feat_cols=['TLT', 'RYE', 'RTM', 'EQAL'] ):
     """
@@ -48,7 +89,7 @@ def review_perf(all_perf_table):
     present performance table without the details / debug field
     '''
     all_perf_table['signame']=all_perf_table.index
-    all_perf_table['signame']=all_perf_table['signame'].apply(lambda x:x.split('.')[2])
+    all_perf_table['signame']=all_perf_table['signame'].apply(lambda x:x.split('.')[-2])
     cols=['start_entry', 'end_exit', 'sum_pct_profit', 'mean_max_drawdown', 'mean_drawdown',
             'mean_pct_profit', 'exposure_adjusted_annualized_gain','lose_trade_cnt',
             'win_trade_cnt', 'total_day_in_trade','median_day_in_trade']
@@ -106,21 +147,18 @@ def run_bear_etf_test(th=0.1, focus_etf_list=None):
         review_perf(all_perf_table)
     return all_perf_table, all_trades_df
 
-def run_test(th=0.10,def_pct_stop=0.1, focus_etf_list=None):
+def run_test(th=0.10,def_pct_stop=0.1, mkt='usa', focus_etf_list=['TMF']):
     ''' run test for a group of target etf '''
     import pandas as pd
     from datalib.heatmapUtil import get_rel_nday_ma_zscore_heatmap
-#    ew_sector_etf_list=['RCD', 'RYH', 'RYT', 'RGI', 'RHS', 'RTM', 'RYF', 'ROOF', 'RSP', 'RYE', 'EQAL', 'EWRE', 'QQEW', 'XBI', 'XAR', 'ROBO','TLT', 'EMLC', 'EEM', 'CURE', 'VXX', 'REM']
-    ew_sector_etf_list=['RCD', 'RYH', 'RYT', 'RGI', 'RHS', 'RTM', 'RYF', 'RSP', 'RYE', 'RYU', 'EQAL', 'EWRE', 'QQEW', 'TLT', 'EMLC', 'EEM' ]
-#    feat_cols=['TLT', 'EQAL', 'RYF', 'EMLC', 'EWRE' 'RTM', 'RYE', 'REM', 'RYT' 'RYU']
-
-    if focus_etf_list is None:
-        focus_etf_list=['TMF']
+    if mkt=='japan':
+        sector_etf_list, feat_cols=get_jp_etf_list()
+    else:
+        sector_etf_list, feat_cols=get_us_etf_list()
     all_perf_table_list=[]
     all_trades_df_list=[]
-    feat_cols=['TLT', 'EQAL', 'RYF', 'EMLC', 'EWRE', 'RTM', 'RYE', 'EEM', 'RYT', 'RYU', 'RHS']
     for t in focus_etf_list:
-        tlist=list(set(ew_sector_etf_list+[t]))
+        tlist=list(set(sector_etf_list+[t]))
         rank_df=get_rel_nday_ma_zscore_heatmap(tlist, list_tag='rank_sector_etf', use_rank=True, zdays=0)
 
         all_perf_table_bull, all_trades_df_bull=batch_sector_rotation_learning(rank_df, focus_etf_list=[t], th=th,
