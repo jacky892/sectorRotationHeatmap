@@ -81,8 +81,8 @@ def simple_catboost_learner(ticker, feats_df, feat_cols, target_col, th=-0.05, t
     cate_features_index = np.where(train_x[feat_cols].dtypes != float)[0]
     metric_period=150
     if param==defaultdict():
-#        param['task_type']='CPU'
-        param['task_type']='GPU'
+        param['task_type']='CPU'
+#        param['task_type']='GPU'
         param['depth']=7
         param['l2_leaf_reg']=1e-19
     depth=param['depth']

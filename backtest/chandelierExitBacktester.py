@@ -542,7 +542,7 @@ class chandelierExitBacktester:
         int smooth_day: rolling max for the output signal, so that the exist signal
                 remain high after the cross over, for use in breadth calcuation
         '''
-        import talib
+#        import talib
         ret_df=pdf
         _high=pdf.High.rolling(atr_days, min_periods=2).max().shift(1).bfill()
         _low=pdf.Low.rolling(int(atr_days/2), min_periods=2).min().shift(1).bfill()
@@ -550,8 +550,9 @@ class chandelierExitBacktester:
             atr=pdf['atr']
         else:
             # function will add the ATR if not set,
-            #import pandas_ta
-            atr=talib.ATR(pdf.High, pdf.Low, pdf.Close, atr_days).shift(1)
+            import pandas_ta
+#            atr=talib.ATR(pdf.High, pdf.Low, pdf.Close, atr_days).shift(1)
+            atr=pdf.ta.atr(atr_days).shift(1)
             pdf['atr']=atr
             ret_df['atr']=atr
         ret_df['atr']=atr
