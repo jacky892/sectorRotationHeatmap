@@ -1,5 +1,5 @@
 ,annualized_gain,best_entry,best_exit,best_pct_profit,best_ticker,best_trade,best_trade_drawdown,duration,end_exit,exposure_adjusted_annualized_gain,exposure_adjusted_annualized_gain_per_mean_drawdown,exposure_portion,lose_trade_avg_pct_loss,lose_trade_cnt,lose_trade_median_day_in_trade,lose_trade_median_pct_loss,lose_trade_total_pct_loss,max_trade_pct_loss,max_trade_pct_profit,mean_day_in_trade,mean_drawdown,mean_drawdown_day,mean_max_drawdown,mean_pct_profit,mean_peakprofit,mean_peakprofit_day,median_day_in_trade,median_drawdown,median_drawdown_day,median_pct_profit,median_peakprofit,median_peakprofit_day,model_best_iteration,rticker,start_entry,sum_pct_profit,total_day_in_trade,trade_cnt,trade_type,win_trade_avg_pct_profit,win_trade_cnt,win_trade_median_day_in_trade,win_trade_median_pct_profit,win_trade_total_profit,worst_drawdown,worst_entry,worst_exit,worst_pct_profit,worst_ticker,worst_trade
-TMF.catboost._lb_7_spikeup.long,2.228516148559237,2021-05-13,2021-06-25,0.16782337790726787,TMF,"trade_type                           long
+TMF.catboost._lb_7_spikeup.long,3.024554597653161,2021-05-13,2021-06-25,0.16782337790726787,TMF,"trade_type                           long
 ticker                                TMF
 rticker                               SPY
 entry_date            2021-05-13 00:00:00
@@ -33,7 +33,7 @@ pct_change_std                   0.022438
 remarks                             l_TMF
 pos_scale                             1.0
 params                              atr:3
-Name: (TMF, 2021-05-13 00:00:00), dtype: object",-0.004066865171918519,113,2021-09-03,0.8450413583462878,31.57898888462156,2.6371681415929205,-0.02334871717480652,10,5.5,-0.013883646392456976,-0.2334871717480652,-0.07476944703978984,0.16782337790726787,12.956521739130435,-0.026759607833986378,3 days 07:18:15.652173913,-0.07209523032683943,0.029996703369528734,0.08331969725057384,8 days 17:44:20.869565217,8.0,-0.026759607833986378,3 days 07:18:15.652173913,0.0017927983328581353,0.08331969725057384,8 days 17:44:20.869565217,0,SPY,2021-05-13,0.689924177499161,298,23,long,0.07695094577060219,12,15.5,0.06571871197342934,0.923411349247226,-0.07509883533625879,2021-08-04,2021-08-06,-0.07476944703978984,TMF,"trade_type                           long
+Name: (TMF, 2021-05-13 00:00:00), dtype: object",-0.004066865171918519,113,2021-09-03,0.8785981221974478,33.09847894517203,3.4424778761061945,-0.026254224605245218,10,2.0,-0.014596459444487741,-0.2625422460524522,-0.07476944703978984,0.16782337790726787,13.413793103448276,-0.02654496974476847,2 days 20:41:22.758620689,-0.07779863852059071,0.03228858474584857,0.09005917956972496,9 days 14:04:08.275862069,11.0,-0.02654496974476847,2 days 20:41:22.758620689,0.017696052542756385,0.09005917956972496,9 days 14:04:08.275862069,0,SPY,2021-05-13,0.9363689576296087,389,29,long,0.06660617798233673,18,14.5,0.048197769403995755,1.198911203682061,-0.07509883533625879,2021-08-04,2021-08-06,-0.07476944703978984,TMF,"trade_type                           long
 ticker                                TMF
 rticker                               SPY
 entry_date            2021-08-04 00:00:00
