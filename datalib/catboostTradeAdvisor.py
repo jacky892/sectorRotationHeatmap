@@ -70,10 +70,9 @@ def simple_xgboost_learner(ticker, feats_df, feat_cols, target_col, th=-0.05, te
 
     plst = list(param.items())+[('eval_metric', 'ams@0.15')]
 
-    watchlist = [ (xgmat,'train') , (xgmat_test,'val') ]
     num_round = 200
     print ('loading data end, start to boost trees')
-    print('watchlist:',watchlist, model, model.get_booster().get_fscore())
+    print('model:', model, model.get_booster().get_fscore())
     unique_y=list(set(train_y))
     dlog(f'unique_y: {unique_y, train_y.shape, test_y.shape, test_x.shape}')
     model_best_iteration=model.get_booster().best_iteration
