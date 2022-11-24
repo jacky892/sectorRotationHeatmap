@@ -67,24 +67,18 @@ def simple_xgboost_learner(ticker, feats_df, feat_cols, target_col, th=-0.05, te
     model = XGBClassifier(learning_rate=0.001, n_estimators=n_estimators, max_depth=max_depth, scale_pos_weight=6)
 
     model.fit(train_x, train_y)
-    xgmat = xgboost.DMatrix(train_x, label=train_y, missing = missing,
-                            feature_names=feat_cols )
-    xgmat_test = xgboost.DMatrix( test_x, label=test_y, missing = missing,
-                            feature_names=feat_cols)
 
     plst = list(param.items())+[('eval_metric', 'ams@0.15')]
 
     watchlist = [ (xgmat,'train') , (xgmat_test,'val') ]
-    # boost 120 trees
     num_round = 200
     print ('loading data end, start to boost trees')
-    model = xgboost.train( plst, xgmat, num_round, watchlist, verbose_eval=20);
-    print('watchlist:',watchlist, model, model.get_fscore())
+    print('watchlist:',watchlist, model, model.get_booster().get_fscore())
     unique_y=list(set(train_y))
     dlog(f'unique_y: {unique_y, train_y.shape, test_y.shape, test_x.shape}')
-    #best_iteration=model.get_best_iteration()
-    #model_best_iteration=model.best_iteration_
-    y_pred = model.predict(xgmat_test)
+    model_best_iteration=model.get_booster().best_iteration
+    y_pred = model.predict(test_x)
+    
     print('pred 1is ', y_pred, len(y_pred))
     pred_flag = [round(value) for value in y_pred]
     print('pred fixed is ', pred_flag, len(pred_flag))
@@ -110,18 +104,19 @@ def simple_xgboost_learner(ticker, feats_df, feat_cols, target_col, th=-0.05, te
     #dlog(f'precision:{precision}, {recall}, {f1}, {best_iteration}, {support} ')
     rel_cols=feat_cols
     print(dir(model))
-    #rf_importances = pd.DataFrame({'name':rel_cols[:len(model.feature_importances_)],
-    #                                    'imp_val':model.feature_importances_
-    #                                      }).sort_values(by='imp_val',
-    #                                       ascending=False).reset_index(drop=True)
-    #dlog(rf_importances)
+    feature_importances=model.feature_importances_
+    rf_importances = pd.DataFrame({'name':rel_cols[:len(feature_importances)],
+                                        'imp_val':feature_importances
+                                          }).sort_values(by='imp_val',
+                                           ascending=False).reset_index(drop=True)
+    dlog(rf_importances)
     dlog(' pred_flag:',)
     ret_df=pd.DataFrame()
     ret_df['y']=test_y
     ret_df['pred_y']=pred_flag
     dlog(ret_df)
     ret_dict=defaultdict()
-    #ret_dict['rf_importances']=rf_importances
+    ret_dict['rf_importances']=rf_importances
     ret_dict['score1']=score1
     ret_dict['score2']=score2
     ret_dict['score3']=score3
@@ -130,7 +125,8 @@ def simple_xgboost_learner(ticker, feats_df, feat_cols, target_col, th=-0.05, te
     ret_dict['f1']=f1
     ret_dict['pred_df']=ret_df
     ret_dict['model']=model
-    #ret_dict['model_best_iteration']=model_best_iteration
+    ret_dict['model_best_iteration']=model_be
+    st_iteration
     ret_dict['split_dict']=split_dict
 
     return ret_dict
@@ -316,8 +312,9 @@ class catboostTradeAdvisor:
     #        all_ret_dict[target_col]=x
         target_cols=[  f'_lb_{day}_spikeup' , f'_lb_{day}_bigrise' ,]
         use_catboost=check_catboost_installed()
+        #use_catboost=False
         for target_col in target_cols:
-            if use_catboost:
+            if not use_catboost:
                 x=simple_xgboost_learner(focus_ticker, ndf, feat_cols, target_col, th=threshold, test_sample_cnt=test_sample_cnt, param={})
             else:        
                 x=simple_catboost_learner(focus_ticker, ndf, feat_cols, target_col, th=threshold, test_sample_cnt=test_sample_cnt, param={})
