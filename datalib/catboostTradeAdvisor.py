@@ -47,6 +47,96 @@ def split_data_classifier(feat_df, feat_cols, target_col='_n_ret', th=-0.05, tes
 
     return ret_dict
 
+def simple_xgboost_learner(ticker, feats_df, feat_cols, target_col, th=-0.05, test_sample_cnt=300, longshort='long', show_cv=False, param={}):
+    import pandas as pd
+    import numpy as np
+    import xgboost
+    from sklearn import metrics
+    dlog(f'{longshort} {ticker} at cat boost:{feats_df.tail()}')
+    split_dict=split_data_classifier(feats_df,  feat_cols, target_col, th=th, test_sample_cnt=test_sample_cnt)
+
+    train_x=split_dict['X_train']
+    train_y=split_dict['y_train']
+    test_x=split_dict['X_test']
+    test_y=split_dict['y_test']
+    import xgboost
+    missing=float('nan')
+    from xgboost import XGBClassifier
+    n_estimators=100
+    max_depth=5 
+    model = XGBClassifier(learning_rate=0.001, n_estimators=n_estimators, max_depth=max_depth, scale_pos_weight=6)
+
+    model.fit(train_x, train_y)
+    xgmat = xgboost.DMatrix(train_x, label=train_y, missing = missing,
+                            feature_names=feat_cols )
+    xgmat_test = xgboost.DMatrix( test_x, label=test_y, missing = missing,
+                            feature_names=feat_cols)
+
+    plst = list(param.items())+[('eval_metric', 'ams@0.15')]
+
+    watchlist = [ (xgmat,'train') , (xgmat_test,'val') ]
+    # boost 120 trees
+    num_round = 200
+    print ('loading data end, start to boost trees')
+    model = xgboost.train( plst, xgmat, num_round, watchlist, verbose_eval=20);
+    print('watchlist:',watchlist, model, model.get_fscore())
+    unique_y=list(set(train_y))
+    dlog(f'unique_y: {unique_y, train_y.shape, test_y.shape, test_x.shape}')
+    #best_iteration=model.get_best_iteration()
+    #model_best_iteration=model.best_iteration_
+    y_pred = model.predict(xgmat_test)
+    print('pred 1is ', y_pred, len(y_pred))
+    pred_flag = [round(value) for value in y_pred]
+    print('pred fixed is ', pred_flag, len(pred_flag))
+    score1=metrics.accuracy_score(test_y, pred_flag)
+    score2=metrics.confusion_matrix(test_y, pred_flag)
+    score3=metrics.classification_report(test_y, pred_flag)
+    iclasses=sorted(list(set(train_y)))
+    iclasses_t=sorted(list(set(list(np.unique(test_y))+list(np.unique(pred_flag)))))
+    if iclasses[0]==-1:
+        classes_dict_nways={-1:'drop', 0:'sideway', 1:'rise', 2:'rise'}
+    else:
+        classes_dict_nways={-1:'drop', 0:'drop', 1:'sideway', 2:'rise', 3:'rise'}
+    test_classes_name= [classes_dict_nways[c] for c in iclasses_t]
+    if len(test_classes_name)==1:
+        test_classes_name=['True', 'False']
+    dlog(f'test_classes_names: names, dict, ilist {test_classes_name, classes_dict_nways, iclasses, iclasses_t}')
+    cfm_fname='tmp/a.jpg'
+    dlog(f'scores {score1, feat_cols}')
+    dlog(f'score2:{score2}')
+    dlog(f'report {score3}'.replace('report', 're') )
+    from sklearn.metrics import precision_recall_fscore_support
+    precision, recall, f1, support= precision_recall_fscore_support(test_y, pred_flag)
+    #dlog(f'precision:{precision}, {recall}, {f1}, {best_iteration}, {support} ')
+    rel_cols=feat_cols
+    print(dir(model))
+    #rf_importances = pd.DataFrame({'name':rel_cols[:len(model.feature_importances_)],
+    #                                    'imp_val':model.feature_importances_
+    #                                      }).sort_values(by='imp_val',
+    #                                       ascending=False).reset_index(drop=True)
+    #dlog(rf_importances)
+    dlog(' pred_flag:',)
+    ret_df=pd.DataFrame()
+    ret_df['y']=test_y
+    ret_df['pred_y']=pred_flag
+    dlog(ret_df)
+    ret_dict=defaultdict()
+    #ret_dict['rf_importances']=rf_importances
+    ret_dict['score1']=score1
+    ret_dict['score2']=score2
+    ret_dict['score3']=score3
+    ret_dict['recall']=recall
+    ret_dict['cfm_fname']=cfm_fname
+    ret_dict['f1']=f1
+    ret_dict['pred_df']=ret_df
+    ret_dict['model']=model
+    #ret_dict['model_best_iteration']=model_best_iteration
+    ret_dict['split_dict']=split_dict
+
+    return ret_dict
+
+
+
 def simple_catboost_learner(ticker, feats_df, feat_cols, target_col, th=-0.05, test_sample_cnt=300, longshort='long', show_cv=False, param={}):
     '''
     Keyword arguments:
@@ -172,6 +262,15 @@ def simple_catboost_learner(ticker, feats_df, feat_cols, target_col, th=-0.05, t
 
     return ret_dict
 
+def check_catboost_installed():
+    ret=True
+    try:
+        import catboost
+        print("module 'catboost' is installed")
+    except Exception as e:
+        print('error', e)
+        ret=False
+    return ret
 
 class catboostTradeAdvisor:
     @staticmethod
@@ -216,8 +315,12 @@ class catboostTradeAdvisor:
     #        dlog(f'bt dict keys:{x.keys()}')
     #        all_ret_dict[target_col]=x
         target_cols=[  f'_lb_{day}_spikeup' , f'_lb_{day}_bigrise' ,]
+        use_catboost=check_catboost_installed()
         for target_col in target_cols:
-            x=simple_catboost_learner(focus_ticker, ndf, feat_cols, target_col, th=threshold, test_sample_cnt=test_sample_cnt, param={})
+            if use_catboost:
+                x=simple_xgboost_learner(focus_ticker, ndf, feat_cols, target_col, th=threshold, test_sample_cnt=test_sample_cnt, param={})
+            else:        
+                x=simple_catboost_learner(focus_ticker, ndf, feat_cols, target_col, th=threshold, test_sample_cnt=test_sample_cnt, param={})
             all_ret_dict[target_col]=x
 
     #    target_cols=[ f'_lb_{day}_spikedown',  f'_lb_{day}_bigdrop' ]
@@ -233,7 +336,9 @@ class catboostTradeAdvisor:
                 continue
             ret_df=ret_dict['pred_df']
             cfmatrix=ret_dict['cfm_fname']
-            rf_importances=ret_dict['rf_importances']
+            rf_importances=pd.DataFrame()
+            if 'rf_importances' in ret_dict:
+                rf_importances=ret_dict['rf_importances']
             model_best_iteration=-1
             img_list.append(cfmatrix)
             ret_df_list.append(ret_df)
