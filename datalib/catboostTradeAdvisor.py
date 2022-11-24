@@ -124,8 +124,7 @@ def simple_xgboost_learner(ticker, feats_df, feat_cols, target_col, th=-0.05, te
     ret_dict['f1']=f1
     ret_dict['pred_df']=ret_df
     ret_dict['model']=model
-    ret_dict['model_best_iteration']=model_be
-    st_iteration
+    ret_dict['model_best_iteration']=model_best_iteration
     ret_dict['split_dict']=split_dict
 
     return ret_dict
