@@ -76,9 +76,13 @@ def read_yf_quote(ticker, pred_date=None):
     read quote from ./data/
     pred_date='20110901' for test
     '''
-    dataroot='/Users/jackylee/optiondata/fullyf'
+    dataroot='data'
     fname=f'{dataroot}/{ticker}/{ticker}.1d.csv.gz'
     df=None
+    if not os.path.exists(dataroot):
+        os.makedirs(dataroot)
+    if not os.path.exists(f'{dataroot}/{ticker}'):
+        os.makedirs(f'{dataroot}/{ticker}')
     if os.path.exists(fname):
         df=pd.read_csv(fname, compression='gzip', index_col=0, parse_dates=True)
     dataroot='data'

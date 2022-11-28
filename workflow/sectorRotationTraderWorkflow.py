@@ -19,8 +19,8 @@ def get_fx_ticker_list()->tuple:
 
 def get_us_etf_list()->tuple:
     #    ew_sector_etf_list=['RCD', 'RYH', 'RYT', 'RGI', 'RHS', 'RTM', 'RYF', 'ROOF', 'RSP', 'RYE', 'EQAL', 'EWRE', 'QQEW', 'XBI', 'XAR', 'ROBO','TLT', 'EMLC', 'EEM', 'CURE', 'VXX', 'REM']
-    ew_sector_etf_list=['RCD', 'RYH', 'RYT', 'RGI', 'RHS', 'RTM', 'RYF', 'RSP', 'RYE', 'RYU', 'EQAL', 'EWRE', 'QQEW', 'TLT', 'EMLC', 'EEM' ]
-    feat_cols=['TLT', 'EQAL', 'RYF', 'EMLC', 'EWRE', 'RTM', 'RYE', 'EEM', 'RYT', 'RYU', 'RHS']
+    ew_sector_etf_list=['RCD', 'RYH', 'RYT', 'RGI', 'RHS', 'RTM', 'RYF', 'RSP', 'RYE', 'RYU', 'EQAL', 'EWRE', 'QQEW', 'TLT', 'EMLC', 'EEM', 'SPY' ]
+    feat_cols=['TLT', 'EQAL', 'RYF', 'EMLC', 'EWRE', 'RTM', 'RYE', 'EEM', 'RYT', 'RYU', 'RHS', 'TMF', 'YCL', 'ULE', 'FAS']
     return ew_sector_etf_list, feat_cols
 
 def get_jp_etf_list()->tuple:
