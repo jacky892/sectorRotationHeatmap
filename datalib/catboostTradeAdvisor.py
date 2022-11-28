@@ -1,7 +1,7 @@
 from collections import defaultdict
 import pandas as pd
 from backtest.chandelierExitBacktester import chandelierExitBacktester as backtester
-from backtest.chandelierExitBacktester import commonUtil as cu
+from datalib.commonUtil import commonUtil as cu
 from backtest.chandelierExitBacktester import dlog
 
 
@@ -59,6 +59,9 @@ def simple_xgboost_learner(ticker, feats_df, feat_cols, target_col, th=-0.05, te
     train_y=split_dict['y_train']
     test_x=split_dict['X_test']
     test_y=split_dict['y_test']
+    print('test_y desc',test_y.describe())
+    print('train_y desc',train_y.describe())
+
     import xgboost
     missing=float('nan')
     from xgboost import XGBClassifier
@@ -269,7 +272,7 @@ def check_catboost_installed():
 class catboostTradeAdvisor:
     @staticmethod
     def learn_from_sector_matrix_df(rank_df, focus_ticker='QQQ', feat_cols=['TLT', 'XLV'], pred_day=7,
-            threshold=0.1, retrace_atr_multiple=3, ex_atr_days=20, def_pct_stop=0.1, test_sample_cnt=80):
+            threshold=0.1, retrace_atr_multiple=3, ex_atr_days=20, def_pct_stop=0.1, test_sample_cnt=80, rticker='SPY'):
         '''
         wrapper function called to gen_ticker_rank_catboost_results, add labels and then call simple_catboost_learner
         Keyword arguments:
@@ -310,7 +313,8 @@ class catboostTradeAdvisor:
     #        all_ret_dict[target_col]=x
         target_cols=[  f'_lb_{day}_spikeup' , f'_lb_{day}_bigrise' ,]
         use_catboost=check_catboost_installed()
-        #use_catboost=False
+        use_catboost=False
+        print(f'before bt rticker:{rticker}')
         for target_col in target_cols:
             if not use_catboost:
                 x=simple_xgboost_learner(focus_ticker, ndf, feat_cols, target_col, th=threshold, test_sample_cnt=test_sample_cnt, param={})
@@ -342,11 +346,13 @@ class catboostTradeAdvisor:
             if 'down' in lb_key or 'drop' in lb_key:
                 longshort='short'
             signame=f'catboost.{lb_key}.{longshort}'
-            bt_dict=backtester.add_backtest_from_pred_df(focus_ticker, pred_df1, pred_col='pred_y', rticker='SPY',
+            bt_dict=backtester.add_backtest_from_pred_df(focus_ticker, pred_df1, pred_col='pred_y', rticker=rticker,
                          trade_type=longshort, signame=signame, retrace_atr_multiple=retrace_atr_multiple, def_pct_stop=def_pct_stop)
             pred_df1.to_csv(f'results/{focus_ticker}.{signame}.pred.csv')
             rf_importances.to_csv(f'results/{focus_ticker}.{signame}.feat_rank.csv')
             if bt_dict is None:
+                continue
+            if bt_dict['trades_df'] is None:
                 continue
             bt_dict['trades_df'].to_csv(f'results/{focus_ticker}.{signame}.trades.csv')
             bt_dict['signame']=signame
@@ -358,7 +364,7 @@ class catboostTradeAdvisor:
 
     @staticmethod
     def gen_ticker_rank_catboost_results(rank_df, focus_ticker='XLE', th=0.08, retrace_atr_multiple=3, def_pct_stop=0.1,
-             ex_atr_days=20, feat_cols=['TLT', 'XLB', 'VNQ', 'XLC'])->tuple:
+             ex_atr_days=20, feat_cols=['TLT', 'XLB', 'VNQ', 'XLC'], rticker='SPY')->tuple:
         '''
         Keyword arguments:
         :DataFrame rank_df: return from heatmapUtil.py get_rel_nday_ma_zscore_heatmap
@@ -371,8 +377,9 @@ class catboostTradeAdvisor:
         import pandas as pd
         rank_cols=feat_cols.copy()
         rank_cols.append(focus_ticker)
-        ret_dict=catboostTradeAdvisor.learn_from_sector_matrix_df(rank_df, focus_ticker=focus_ticker, feat_cols=rank_cols, threshold=th, retrace_atr_multiple=retrace_atr_multiple, ex_atr_days=ex_atr_days, def_pct_stop=def_pct_stop)
-        dlog(ret_dict.keys())
+        test_sample_cnt=int(len(rank_df)*0.2)
+        ret_dict=catboostTradeAdvisor.learn_from_sector_matrix_df(rank_df, focus_ticker=focus_ticker, feat_cols=rank_cols, threshold=th, retrace_atr_multiple=retrace_atr_multiple, ex_atr_days=ex_atr_days, def_pct_stop=def_pct_stop, rticker=rticker, test_sample_cnt=test_sample_cnt)
+        dlog(f'{focus_ticker} results:', ret_dict.keys())
         def get_simple_dict_field(big_dict):
             import pandas as pd
             new_dict=defaultdict()

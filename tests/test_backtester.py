@@ -4,19 +4,21 @@ import logging
 logging.basicConfig()
 logger=logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+import os,sys
+sys.path.append('..')
+if not os.path.exists('workflow'):
+    os.chdir('..')
+
+
 def dlog(msg):
     logger.info(msg)
 
-import os
-import sys
-from os.path import dirname
-sys.path.append('..')
     
 class TestClass(unittest.TestCase):
 
     def test_backtest_with_max_drawdown(self):
         from backtest.chandelierExitBacktester import chandelierExitBacktester, backtest_between, get_long_max_drawdown_details
-        from backtest.chandelierExitBacktester import commonUtil as cu
+        from datalib.commonUtil import commonUtil as cu
         import pandas as pd
         import pandas_ta as ta
         chandelierExitBacktester()

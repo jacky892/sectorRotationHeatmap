@@ -1,4 +1,4 @@
-from backtest.chandelierExitBacktester import commonUtil as cu
+from datalib.commonUtil import commonUtil as cu
 from backtest.chandelierExitBacktester import dlog, showtable
 import pandas as pd
 
@@ -72,11 +72,11 @@ def get_time_matrix_ranked(time_matrix_df):
     rank_df=pd.DataFrame().from_dict(all_rows, orient='columns')
     return rank_df.T.copy()
 
-def get_rel_nday_ma_zscore_heatmap(tlist, list_tag='rank_sector_etf', startdate='20140101', nday=5, use_rank=False, zdays=20, skip_cnt=5):
+def get_rel_nday_ma_zscore_heatmap(tlist, list_tag='rank_sector_etf', startdate='20140101', nday=5, use_rank=False, zdays=20, skip_cnt=5, pred_date=None):
     all_dict={}
     print(tlist)
     for t in tlist:
-        pdf=cu.read_quote(t).loc[startdate:]
+        pdf=cu.read_quote(t, pred_date=pred_date).loc[startdate:]
         retxma=pdf.Close/pdf.Close.rolling(nday).mean()
         if zdays>0:
             all_dict[t]=zscore(retxma, window=zdays)
