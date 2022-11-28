@@ -9,12 +9,12 @@ def is_fx_ticker(ticker):
 def read_duka_dl(ticker='cadjpy'):   
     import pandas as pd
     today=pd.to_datetime('today').strftime('%Y-%m-%d')  
-    today_14ago=pd.to_datetime('today')-pd.to_timedelta('28 days')
-    today_14ago_str=today_14ago.strftime('%Y-%m-%d')
-    cmd=f'npx dukascopy-node -i {ticker} -from {today_14ago_str} -to {today} -t h4 -f csv'
+    today_28ago=pd.to_datetime('today')-pd.to_timedelta('28 days')
+    today_28ago_str=today_28ago.strftime('%Y-%m-%d')
+    cmd=f'npx dukascopy-node -i {ticker} -from {today_28ago_str} -to {today} -t h4 -f csv'
     import sys 
     import os
-    ofname=f'download/{ticker}-h4-bid-{today_14ago_str}-{today}.csv'
+    ofname=f'download/{ticker}-h4-bid-{today_28ago_str}-{today}.csv'
     if not os.path.exists(ofname):
         print(f'no previous download, now download data {ofname}')
         print(cmd)                    
@@ -108,6 +108,13 @@ class commonUtil:
             return read_fx_quote(ticker, pred_date=pred_date)
         else:
             return read_yf_quote(ticker, pred_date=pred_date)
+    @staticmethod
+    def download_quote(ticker):
+        if ticker.lower()==ticker:
+            ret=read_duka_dl(ticker)
+        else:
+            ret=commonUtil.download_yf_quote(ticker)
+        return ret
 
 
     @staticmethod

@@ -7,9 +7,9 @@ from datalib.commonUtil import commonUtil as cu
 
 
 def get_dukas_fx_ticker_list()->tuple:
-    fx_tlist=['eurcad', 'gbpusd', 'nzdusd', 'audusd', 'audnzd', 'usdjpy', 'usdchf', 'usdcad',  'usdsgd']
+    fx_tlist=['eurcad', 'gbpusd', 'nzdusd', 'audusd', 'audnzd', 'usdjpy', 'usdchf', 'usdcad',  'usdsgd', 'eurchf']
     #feat_cols=['eurcad', 'audnzd', 'eurgbp', 'xauusd']
-    feat_cols=['eurcad', 'audnzd', 'eurgbp', 'usdjpy', 'usdchf', 'usdcad']
+    feat_cols=['eurcad', 'audnzd', 'eurgbp', 'usdjpy', 'usdchf', 'usdcad', 'eurusd', 'xauusd']
     return fx_tlist, feat_cols
 
 def get_fx_ticker_list()->tuple:
@@ -19,7 +19,11 @@ def get_fx_ticker_list()->tuple:
 
 def get_us_etf_list()->tuple:
     #    ew_sector_etf_list=['RCD', 'RYH', 'RYT', 'RGI', 'RHS', 'RTM', 'RYF', 'ROOF', 'RSP', 'RYE', 'EQAL', 'EWRE', 'QQEW', 'XBI', 'XAR', 'ROBO','TLT', 'EMLC', 'EEM', 'CURE', 'VXX', 'REM']
+<<<<<<< HEAD
     ew_sector_etf_list=['RCD', 'RYH', 'RYT', 'RGI', 'RHS', 'RTM', 'RYF', 'RSP', 'RYE', 'RYU', 'EQAL', 'EWRE', 'QQEW', 'TLT', 'EMLC', 'EEM', 'SPY' ]
+=======
+    ew_sector_etf_list=['RCD', 'RYH', 'RYT', 'RGI', 'RHS', 'RTM', 'RYF', 'RSP', 'RYE', 'RYU', 'EQAL', 'EWRE', 'QQEW', 'TLT', 'EMLC', 'EEM', 'SPY'  ]
+>>>>>>> dukascopy
     feat_cols=['TLT', 'EQAL', 'RYF', 'EMLC', 'EWRE', 'RTM', 'RYE', 'EEM', 'RYT', 'RYU', 'RHS', 'TMF', 'YCL', 'ULE', 'FAS']
     return ew_sector_etf_list, feat_cols
 
@@ -85,7 +89,7 @@ def batch_sector_rotation_learning(rank_df, focus_etf_list=['CURE', 'TECL'], th=
                 continue
             print('now in test getting in batch sector ',t)
             perf_df, trades_df=catboostTradeAdvisor.gen_ticker_rank_catboost_results(rank_df, retrace_atr_multiple=retrace_atr_multiple,
-                    focus_ticker=t, th=th, ex_atr_days=20, feat_cols=feat_cols, def_pct_stop=def_pct_stop, rticker=rticker)
+                    focus_ticker=t, th=th, ex_atr_bars=20, feat_cols=feat_cols, def_pct_stop=def_pct_stop, rticker=rticker)
             dlog(perf_df)
             if not perf_df is None:
                 table_list.append(perf_df.T)
@@ -231,7 +235,13 @@ def update_data(ticker_group='us_etf'):
     tlist_dict={}
     tlist_dict['us_etf']=get_us_etf_list()
     tlist_dict['fx_tlist']=get_fx_ticker_list()
+    tlist_dict['dukas_fx_tlist']=get_dukas_fx_ticker_list()
     tlist, feat_cols=tlist_dict[ticker_group]
     full_list=list(tlist)+list(feat_cols)
     for ticker in full_list:
-        cu.download_yf_quote(ticker)
+        if not ticker==ticker.lower():
+            print('download using yfinance')
+            cu.download_yf_quote(ticker)
+        else:
+            print(f'download using npx dukascopy for {ticker}')
+            cu.download_quote(ticker)

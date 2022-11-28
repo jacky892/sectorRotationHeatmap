@@ -124,6 +124,7 @@ tests/data/
 tests/results/
 data/
 catinfo.*/
+tmp/
 
 
 # SageMath parsed files
