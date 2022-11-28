@@ -43,3 +43,4 @@ tzlocal==3.0
 urllib3==1.25.11
 yahoofinance==0.0.2
 yfinance==0.1.63
+TA-Lib

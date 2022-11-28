@@ -8,6 +8,7 @@ def_pct_stop = default percentage stop loss from entry price
 import os
 import logging
 from collections import defaultdict
+from datalib.commonUtil import commonUtil as cu
 import pandas as pd
 
 logging.basicConfig()
@@ -60,27 +61,6 @@ def isnotebook():
     except NameError:
         return False      # Probably standard Python interpreter
 
-class commonUtil:
-    @staticmethod
-    def read_quote(ticker):
-        '''
-        read quote from ./data/
-        '''
-        dataroot='/Users/jackylee/optiondata/fullyf'
-        fname=f'{dataroot}/{ticker}/{ticker}.1d.csv.gz'
-        df=None
-        if os.path.exists(fname):
-            df=pd.read_csv(fname, compression='gzip', index_col=0, parse_dates=True)
-        dataroot='data'
-        dirname=(f'{dataroot}/{ticker}')
-        ofname=f'{dataroot}/{ticker}/{ticker}.1d.csv.gz'
-        if not os.path.exists(f'{dataroot}/{ticker}'):
-            os.makedirs(dirname)
-        if df is None:
-            df=pd.read_csv(ofname, compression='gzip', index_col=0, parse_dates=True)
-        else:
-            df.to_csv(ofname, compression='gzip')
-        return df.loc[:'20210903']
 
 def add_3way_label(ndf, uplabel_col='_lb_7_bigrise', dnlabel_col='_lb_7_bigdrop', newcol='_lbm_7_bigmove'):
     '''
@@ -236,7 +216,8 @@ def backtest_between(entry_date, exit_date, price_df, rprice_df, trade_type='lon
     trade_type can be long, short, pair_long, pair_short
     '''
     import math
-    dlog(f'{price_df.index[-1]}, {exit_date}, {len(price_df)}, {extra_info_dict}')
+    
+    #dlog(f'#backtest_between {price_df.index[-1]}, {exit_date}, {len(price_df)}, {extra_info_dict}')
     import pandas as pd
     idx=(price_df.index>=entry_date)
     _=price_df[idx]
@@ -264,6 +245,7 @@ def backtest_between(entry_date, exit_date, price_df, rprice_df, trade_type='lon
     rsubdf=rprice_df[entry_date:exit_date_lag].copy()
     if len(rsubdf)==0:
         dlog(f'rprice_df not updated compared with price_df {extra_info_dict, len(rsubdf)}')
+        raise Exception("rprice_df not updated")
         return None
 
 #        price_pct_diff=(subdf.Close[-1]-subdf.Close[0])/subdf.Close[0]
@@ -441,8 +423,8 @@ def backtest_from_tradedates_df( tradedates_df, price_df, rprice_df, trade_type=
         tradedates_row=v.to_dict()
         entry_date=pd.to_datetime(v['entry_date'])
         exit_date=pd.to_datetime(v['exit_date'])
-        dlog(f'entry_date:{entry_date}')
-        dlog(f'{price_df.iloc[-1].index, entry_date}')
+        #dlog(f'entry_date:{entry_date}')
+        #dlog(f'{price_df.iloc[-1].index, entry_date}')
         if pd.to_datetime(entry_date)>price_df.index[-1]:
             continue
         _=price_df[entry_date:].iloc[0]
@@ -489,7 +471,7 @@ class chandelierExitBacktester:
         subdf=subdf.iloc[trade_idx:trade_idx+1]
         ticker=subdf.iloc[0].ticker
         from backtest.chandelierExitBacktester import chandelierExitBacktester as backtester
-        from backtest.chandelierExitBacktester import commonUtil as cu
+        from datalib.commonUtil import commonUtil as cu
         pdf=cu.read_quote(ticker)
         entry_date=subdf.iloc[0].entry_date
         exit_date=subdf.iloc[0].exit_date
@@ -509,7 +491,7 @@ class chandelierExitBacktester:
         return the trades data frame
         '''
         import pandas as pd
-        from backtest.chandelierExitBacktester import commonUtil as cu
+        from datalib.commonUtil import commonUtil as cu
 
         if trades_csvname is None:
             trades_csvname=f'results/{ticker}.catboost._lb_7_spikeup.long.trades.csv'
@@ -600,7 +582,7 @@ class chandelierExitBacktester:
 
 
     @staticmethod
-    def get_ch_ex_trade_exit_date(entry_date_df, pdf, ticker, trade_type='long', ex_atr_days=22, atr_multiple=3, def_pct_stop=0.10, signame='external', smooth_day=1, plot=False):
+    def get_ch_ex_trade_exit_date(entry_date_df, pdf, ticker, trade_type='long', ex_atr_days=22, atr_multiple=3, def_pct_stop=0.10, signame='external', smooth_day=1, rticker='SPY', plot=False):
         '''
         entry_date_df requires ticker, entry_date columns
         if no entry_date but has signal_date, it will create entry_date column with signal_date+1 trading day
@@ -636,7 +618,7 @@ class chandelierExitBacktester:
             signame=r['signame']
             row['trade_type']=trade_type
             row['ticker']=ticker
-            row['rticker']='SPY'
+            row['rticker']=rticker
             row['entry_date']=entry_date
             row['exit_date']=exit_date
             row['entry_price']=entry_price
@@ -747,7 +729,7 @@ class chandelierExitBacktester:
         '''
 
         if rprice_df is None:
-            rprice_df=commonUtil.read_quote(rticker)
+            rprice_df=cu.read_quote(rticker)
 
         trades_df=backtest_from_tradedates_df(tradedates_df, price_df, rprice_df, trade_type=trade_type)
         dlog(f'trades_df cols {trades_df.columns, trades_df.shape}')
@@ -786,13 +768,14 @@ class chandelierExitBacktester:
             entry_date_df['ticker']=ticker
     #        ticker=list(pred_df.ticker.unique())
         entry_date_df['signame']=signame
-        price_df=commonUtil.read_quote(ticker)
+        price_df=cu.read_quote(ticker)
         tradedates_df=chandelierExitBacktester.get_ch_ex_trade_exit_date(entry_date_df, price_df, ticker=ticker,
-                ex_atr_days=ex_atr_days, trade_type=trade_type, atr_multiple=retrace_atr_multiple,
+                ex_atr_days=ex_atr_days, trade_type=trade_type, atr_multiple=retrace_atr_multiple, rticker=rticker,
                 def_pct_stop=def_pct_stop,  plot=plot)
 
-        tradesummary, trades_df=chandelierExitBacktester.gen_ch_ex_trades_from_tradedates(tradedates_df, price_df, ticker=ticker, trade_type=trade_type)
-        trades_df['signame']=signame
+        tradesummary, trades_df=chandelierExitBacktester.gen_ch_ex_trades_from_tradedates(tradedates_df, price_df, ticker=ticker, rticker=rticker, trade_type=trade_type)
+        if not trades_df is None:
+           trades_df['signame']=signame
         ret_dict=defaultdict()
         ret_dict['all_tradesummary']=tradesummary
         ret_dict['trades_df']=trades_df
