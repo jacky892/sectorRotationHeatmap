@@ -1,6 +1,6 @@
 '''
-run backtesting according to the signed entry day using chandelier exit (recent high - n * ATR)
-required paramerters include threshold of N-days movement (e.g. > 10% in 7 trading days)
+run backtesting according to the signed entry bars using chandelier exit (recent high - n * ATR)
+required paramerters include threshold of N-bars movement (e.g. > 10% in 7 trading bars)
 retrace_atr_multiple = 3
 pdf/price_df being price quote from commonUtil.read_quote
 def_pct_stop = default percentage stop loss from entry price
@@ -85,7 +85,7 @@ def get_signal_cross(signal_df, col1, col2):
     cross_sign=(_>0)*cross-(_<0)*cross
     return cross_sign
 
-def get_long_max_drawdown_details(pdf, day_cnt=250, atr_days=22, atr_multiple=4, plot=False)->dict:
+def get_long_max_drawdown_details(pdf, day_cnt=250, atr_bars=22, atr_multiple=4, plot=False)->dict:
     '''
     get the max draw down from peak during the timeframe in pdf
     return dict
@@ -119,7 +119,7 @@ def get_long_max_drawdown_details(pdf, day_cnt=250, atr_days=22, atr_multiple=4,
     if 'atr' in pdf.columns:
         atr=pdf['atr']
     else:
-        atr=pdf.ta.atr(atr_days)
+        atr=pdf.ta.atr(atr_bars)
     ret_dict['atr_exit']=Roll_Max-atr*atr_multiple
     ret_dict['atr_exit_dd']=ret_dict['atr_exit']/Roll_Max-1
     ret_dict['dd_if_exited']=(Roll_Max-pdf.Close)/Roll_Max
@@ -152,7 +152,7 @@ def show_trades(trades_df):
 
 
 
-def get_short_max_drawdown_details(pdf, day_cnt=250, atr_days=22, atr_multiple=4, plot=False)->dict:
+def get_short_max_drawdown_details(pdf, day_cnt=250, atr_bars=22, atr_multiple=4, plot=False)->dict:
     '''
     sell get_long_max_drawdown_details
     '''
@@ -198,7 +198,7 @@ def get_short_max_drawdown_details(pdf, day_cnt=250, atr_days=22, atr_multiple=4
     if 'atr' in pdf.columns:
         atr=pdf['atr']
     else:
-        atr=pdf.ta.atr(atr_days)
+        atr=pdf.ta.atr(atr_bars)
     ret_dict['atr_exit']=Roll_Min-atr*atr_multiple
     ret_dict['atr_exit_dd']=1-ret_dict['atr_exit']/Roll_Min
     ret_dict['dd_if_exited']=(Roll_Min-pdf.Close)/Roll_Min
@@ -290,7 +290,7 @@ def backtest_between(entry_date, exit_date, price_df, rprice_df, trade_type='lon
         rticker=extra_info_dict['rticker']
     if trade_type=='long':
         drawdown=min(subdf.Low.min()-subdf.Close[0], 0)
-        mdd_dict=get_long_max_drawdown_details(subdf, atr_days=22, atr_multiple=4)
+        mdd_dict=get_long_max_drawdown_details(subdf, atr_bars=22, atr_multiple=4)
         mdd_exceeded=mdd_dict['mdd_exceeded']
         mdd_date= mdd_dict['mdd_idx'][-1]
         mdd= mdd_dict['mdd']
@@ -309,7 +309,7 @@ def backtest_between(entry_date, exit_date, price_df, rprice_df, trade_type='lon
         remarks='l_%s' % ticker
     if trade_type=='short':
         peakprofit=-1*min(subdf.Low.min()-subdf.Close[0], 0)
-        mdd_dict=get_short_max_drawdown_details(subdf, atr_days=22, atr_multiple=4)
+        mdd_dict=get_short_max_drawdown_details(subdf, atr_bars=22, atr_multiple=4)
         mdd_exceeded=mdd_dict['mdd_exceeded']
         mdd_date= mdd_dict['mdd_idx'][-1]
         mdd=mdd_dict['mdd']
@@ -514,27 +514,27 @@ class chandelierExitBacktester:
         return tdf
 
     @staticmethod
-    def get_chandelier_long_exit_signal(pdf, atr_days=22, retrace_atr_multiple=3, def_pct_stop=0.1, smooth_day=6, ret_details=False, plot=False):
+    def get_chandelier_long_exit_signal(pdf, atr_bars=22, retrace_atr_multiple=3, def_pct_stop=0.1, smooth_bars=6, ret_details=False, plot=False):
         '''
         note that this function require the 'atr' column be set before passing in
         Keyword Argruments:
         DataFrame pdf: price_df from commonUtil.read_quote, need to have the atr columns set
                 before otherwise some nan value will appear in the start of the series
         int retrace_atr_multiple: no of atr multiple retracement before exit
-        int smooth_day: rolling max for the output signal, so that the exist signal
+        int smooth_bars: rolling max for the output signal, so that the exist signal
                 remain high after the cross over, for use in breadth calcuation
         '''
 #        import talib
         ret_df=pdf
-        _high=pdf.High.rolling(atr_days, min_periods=2).max().shift(1).bfill()
-        _low=pdf.Low.rolling(int(atr_days/2), min_periods=2).min().shift(1).bfill()
+        _high=pdf.High.rolling(atr_bars, min_periods=2).max().shift(1).bfill()
+        _low=pdf.Low.rolling(int(atr_bars/2), min_periods=2).min().shift(1).bfill()
         if 'atr' in pdf.columns:
             atr=pdf['atr']
         else:
             # function will add the ATR if not set,
             import pandas_ta
-#            atr=talib.ATR(pdf.High, pdf.Low, pdf.Close, atr_days).shift(1)
-            atr=pdf.ta.atr(atr_days).shift(1)
+#            atr=talib.ATR(pdf.High, pdf.Low, pdf.Close, atr_bars).shift(1)
+            atr=pdf.ta.atr(atr_bars).shift(1)
             pdf['atr']=atr
             ret_df['atr']=atr
         ret_df['atr']=atr
@@ -576,13 +576,13 @@ class chandelierExitBacktester:
 
 
         if ret_details:
-            ret_df['exit_signal']=ret_df['exit_signal'].rolling(smooth_day).max()
+            ret_df['exit_signal']=ret_df['exit_signal'].rolling(smooth_bars).max()
             return 'ch_ex20d', ret_df
-        return 'ch_ex20d', ret_df['exit_signal'].rolling(smooth_day).max()
+        return 'ch_ex20d', ret_df['exit_signal'].rolling(smooth_bars).max()
 
 
     @staticmethod
-    def get_ch_ex_trade_exit_date(entry_date_df, pdf, ticker, trade_type='long', ex_atr_days=22, atr_multiple=3, def_pct_stop=0.10, signame='external', smooth_day=1, rticker='SPY', plot=False):
+    def get_ch_ex_trade_exit_date(entry_date_df, pdf, ticker, trade_type='long', ex_atr_bars=22, atr_multiple=3, def_pct_stop=0.10, signame='external', smooth_bars=1, rticker='SPY', plot=False):
         '''
         entry_date_df requires ticker, entry_date columns
         if no entry_date but has signal_date, it will create entry_date column with signal_date+1 trading day
@@ -597,8 +597,8 @@ class chandelierExitBacktester:
             entry_date_df['entry_date']=entry_date_df['signal_date'].apply(lambda x:get_next_day(x, pdf))
         first_entry_date=entry_date_df['entry_date'].iloc[0]
 
-        pdf['atr']=pdf.ta.atr(ex_atr_days)
-        signame, _=chandelierExitBacktester.get_chandelier_long_exit_signal(pdf.loc[first_entry_date:].copy(), atr_days=ex_atr_days, def_pct_stop=def_pct_stop, retrace_atr_multiple=atr_multiple,  smooth_day=smooth_day, plot=plot)
+        pdf['atr']=pdf.ta.atr(ex_atr_bars)
+        signame, _=chandelierExitBacktester.get_chandelier_long_exit_signal(pdf.loc[first_entry_date:].copy(), atr_bars=ex_atr_bars, def_pct_stop=def_pct_stop, retrace_atr_multiple=atr_multiple,  smooth_bars=smooth_bars, plot=plot)
         exit_idx=_>0
         exit_cross=_[exit_idx]
 
@@ -696,7 +696,7 @@ class chandelierExitBacktester:
         ret_dict['lose_trade_median_day_in_trade']=all_trade_df.query('pct_profit<0').day_in_trade.median()
         ret_dict['start_entry']=all_trade_df.entry_date.min()
         ret_dict['end_exit']=all_trade_df.exit_date.max()
-        ret_dict['duration']=(ret_dict['end_exit']-ret_dict['start_entry']).days
+        ret_dict['duration']=(ret_dict['end_exit']-ret_dict['start_entry']).days+0.5
         ret_dict['total_day_in_trade']=all_trade_df.day_in_trade.sum()
         ret_dict['exposure_portion']=ret_dict['total_day_in_trade']/ret_dict['duration']
         ret_dict['annualized_gain']=ret_dict['sum_pct_profit']*365/ret_dict['duration']
@@ -744,7 +744,7 @@ class chandelierExitBacktester:
 
     @staticmethod
     def add_backtest_from_pred_df(ticker, pred_df, pred_col='pred_y', rticker='SPY', signame='catboost._lb_spikeup',
-            trade_type='long', retrace_atr_multiple=3, ex_atr_days=20, def_pct_stop=0.1, plot=False):
+            trade_type='long', retrace_atr_multiple=3, ex_atr_bars=20, def_pct_stop=0.1, plot=False):
         '''
 
         Keyword arguments:
@@ -770,7 +770,7 @@ class chandelierExitBacktester:
         entry_date_df['signame']=signame
         price_df=cu.read_quote(ticker)
         tradedates_df=chandelierExitBacktester.get_ch_ex_trade_exit_date(entry_date_df, price_df, ticker=ticker,
-                ex_atr_days=ex_atr_days, trade_type=trade_type, atr_multiple=retrace_atr_multiple, rticker=rticker,
+                ex_atr_bars=ex_atr_bars, trade_type=trade_type, atr_multiple=retrace_atr_multiple, rticker=rticker,
                 def_pct_stop=def_pct_stop,  plot=plot)
 
         tradesummary, trades_df=chandelierExitBacktester.gen_ch_ex_trades_from_tradedates(tradedates_df, price_df, ticker=ticker, rticker=rticker, trade_type=trade_type)
@@ -782,31 +782,31 @@ class chandelierExitBacktester:
         return ret_dict
 
     @staticmethod
-    def add_labels_by_day(ndf, day=15, threshold=0.09):
+    def add_labels_by_bars(ndf, bars=15, threshold=0.09):
         '''
-        create _lb_{day}_labels according to the threshold,
+        create _lb_{bars}_labels according to the threshold,
         spikeup mean reached threshold at least once,
-        bigrise mean still above threshold after x days
+        bigrise mean still above threshold after x bars
         '''
-        fieldname='_n_ret%s' % day
-        ndf[fieldname]=(ndf.Close.shift(-day)-ndf.Close)/ndf.Close
-        ndf[f'_lb_{day}_bigrise']=ndf[fieldname]>threshold
-        ndf[f'_lb_{day}_bigdrop']=ndf[fieldname]<-threshold
-        ndf[f'_lb_{day}_bigrise']=ndf[f'_lb_{day}_bigrise']*1
-        ndf[f'_lb_{day}_bigdrop']=ndf[f'_lb_{day}_bigdrop']*1
+        fieldname='_n_ret%s' % bars
+        ndf[fieldname]=(ndf.Close.shift(-bars)-ndf.Close)/ndf.Close
+        ndf[f'_lb_{bars}_bigrise']=ndf[fieldname]>threshold
+        ndf[f'_lb_{bars}_bigdrop']=ndf[fieldname]<-threshold
+        ndf[f'_lb_{bars}_bigrise']=ndf[f'_lb_{bars}_bigrise']*1
+        ndf[f'_lb_{bars}_bigdrop']=ndf[f'_lb_{bars}_bigdrop']*1
 
-        low_fieldname=f'_n_{day}d_low'
-        high_fieldname=f'_n_{day}d_high'
-        ndf[low_fieldname]=ndf.Low.shift(-day).rolling(window=(day),min_periods=3).min()
-        ndf[high_fieldname]=ndf.High.shift(-day).rolling(window=(day),min_periods=3).max()
-        ndf[f'_lb_{day}_spikedown']=ndf.eval(f'(Close  - {low_fieldname})/Close')>threshold
-        ndf[f'_lb_{day}_spikedown']=ndf[f'_lb_{day}_spikedown']*1
-        ndf[f'_lb_{day}_spikeup']=ndf.eval(f'({high_fieldname}-Close)/Close')>threshold
-        ndf[f'_lb_{day}_spikeup']=ndf[f'_lb_{day}_spikeup']*1
-        add_3way_label(ndf, uplabel_col=f'_lb_{day}_bigrise', dnlabel_col=f'_lb_{day}_bigdrop', newcol=f'_lbm_{day}_bigmove')
-        dlog(ndf[f'_lbm_{day}_bigmove'].describe())
-        add_3way_label(ndf, uplabel_col=f'_lb_{day}_spikeup', dnlabel_col=f'_lb_{day}_spikedown', newcol=f'_lbm_{day}_bigspike')
-        dlog(ndf[f'_lbm_{day}_bigspike'].describe())
+        low_fieldname=f'_n_{bars}d_low'
+        high_fieldname=f'_n_{bars}d_high'
+        ndf[low_fieldname]=ndf.Low.shift(-bars).rolling(window=(bars),min_periods=3).min()
+        ndf[high_fieldname]=ndf.High.shift(-bars).rolling(window=(bars),min_periods=3).max()
+        ndf[f'_lb_{bars}_spikedown']=ndf.eval(f'(Close  - {low_fieldname})/Close')>threshold
+        ndf[f'_lb_{bars}_spikedown']=ndf[f'_lb_{bars}_spikedown']*1
+        ndf[f'_lb_{bars}_spikeup']=ndf.eval(f'({high_fieldname}-Close)/Close')>threshold
+        ndf[f'_lb_{bars}_spikeup']=ndf[f'_lb_{bars}_spikeup']*1
+        add_3way_label(ndf, uplabel_col=f'_lb_{bars}_bigrise', dnlabel_col=f'_lb_{bars}_bigdrop', newcol=f'_lbm_{bars}_bigmove')
+        dlog(ndf[f'_lbm_{bars}_bigmove'].describe())
+        add_3way_label(ndf, uplabel_col=f'_lb_{bars}_spikeup', dnlabel_col=f'_lb_{bars}_spikedown', newcol=f'_lbm_{bars}_bigspike')
+        dlog(ndf[f'_lbm_{bars}_bigspike'].describe())
 
         label_cols=[x for x in ndf.columns if x[:3]=='_lb']
         return label_cols

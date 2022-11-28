@@ -139,7 +139,7 @@ def simple_catboost_learner(ticker, feats_df, feat_cols, target_col, th=-0.05, t
     Keyword arguments:
     :DataFrame feats_df : dataframes with all the features in feat_cols
     :list feat_cols: list of columns to be used as features, e.g. ['TLT', 'RYT', 'EQAL']
-    :str target_col: added by e.g. backtester.add_labels_by_day _lb_7_spikeup
+    :str target_col: added by e.g. backtester.add_labels_by_bars_lb_7_spikeup
     :DataFrame rank_df: return from heatmapUtil.py get_rel_nday_ma_zscore_heatmap
     :str focus_ticker: ticker's trading signal you want to train for
     :returns: dict
@@ -271,8 +271,8 @@ def check_catboost_installed():
 
 class catboostTradeAdvisor:
     @staticmethod
-    def learn_from_sector_matrix_df(rank_df, focus_ticker='QQQ', feat_cols=['TLT', 'XLV'], pred_day=7,
-            threshold=0.1, retrace_atr_multiple=3, ex_atr_days=20, def_pct_stop=0.1, test_sample_cnt=80, rticker='SPY'):
+    def learn_from_sector_matrix_df(rank_df, focus_ticker='QQQ', feat_cols=['TLT', 'XLV'], pred_bars=7,
+            threshold=0.1, retrace_atr_multiple=3, ex_atr_bars=20, def_pct_stop=0.1, test_sample_cnt=80, rticker='SPY'):
         '''
         wrapper function called to gen_ticker_rank_catboost_results, add labels and then call simple_catboost_learner
         Keyword arguments:
@@ -296,8 +296,8 @@ class catboostTradeAdvisor:
             ret_df[f'i_{t}_d2']=rxdf[t].diff(1).diff(1)
 
         pdf=cu.read_quote(focus_ticker)
-        day=pred_day
-        label_cols=backtester.add_labels_by_day(pdf, day=day, threshold=threshold)
+        bars=pred_bars
+        label_cols=backtester.add_labels_by_bars(pdf, bars=bars, threshold=threshold)
         dlog(f'possible target cols: {label_cols}')
         ndf=ret_df.merge(pdf, left_index=True, right_index=True)
         dlog(f'label cols:{label_cols}')
@@ -311,7 +311,7 @@ class catboostTradeAdvisor:
     #        x=simple_catboost_learner(focus_ticker, ndf, feat_cols, target_col, th=[-threshold, threshold], test_sample_cnt=test_sample_cnt, param={})
     #        dlog(f'bt dict keys:{x.keys()}')
     #        all_ret_dict[target_col]=x
-        target_cols=[  f'_lb_{day}_spikeup' , f'_lb_{day}_bigrise' ,]
+        target_cols=[  f'_lb_{bars}_spikeup' , f'_lb_{bars}_bigrise' ,]
         use_catboost=check_catboost_installed()
         use_catboost=False
         print(f'before bt rticker:{rticker}')
@@ -364,7 +364,7 @@ class catboostTradeAdvisor:
 
     @staticmethod
     def gen_ticker_rank_catboost_results(rank_df, focus_ticker='XLE', th=0.08, retrace_atr_multiple=3, def_pct_stop=0.1,
-             ex_atr_days=20, feat_cols=['TLT', 'XLB', 'VNQ', 'XLC'], rticker='SPY')->tuple:
+             ex_atr_bars=20, feat_cols=['TLT', 'XLB', 'VNQ', 'XLC'], rticker='SPY')->tuple:
         '''
         Keyword arguments:
         :DataFrame rank_df: return from heatmapUtil.py get_rel_nday_ma_zscore_heatmap
@@ -378,7 +378,7 @@ class catboostTradeAdvisor:
         rank_cols=feat_cols.copy()
         rank_cols.append(focus_ticker)
         test_sample_cnt=int(len(rank_df)*0.2)
-        ret_dict=catboostTradeAdvisor.learn_from_sector_matrix_df(rank_df, focus_ticker=focus_ticker, feat_cols=rank_cols, threshold=th, retrace_atr_multiple=retrace_atr_multiple, ex_atr_days=ex_atr_days, def_pct_stop=def_pct_stop, rticker=rticker, test_sample_cnt=test_sample_cnt)
+        ret_dict=catboostTradeAdvisor.learn_from_sector_matrix_df(rank_df, focus_ticker=focus_ticker, feat_cols=rank_cols, threshold=th, retrace_atr_multiple=retrace_atr_multiple, ex_atr_bars=ex_atr_bars, def_pct_stop=def_pct_stop, rticker=rticker, test_sample_cnt=test_sample_cnt)
         dlog(f'{focus_ticker} results:', ret_dict.keys())
         def get_simple_dict_field(big_dict):
             import pandas as pd
