@@ -19,7 +19,6 @@ MarkupSafe==2.0.1
 matplotlib==3.4.2
 matplotlib-inline==0.1.2
 nbconvert==6.1.0
-nltk==3.6.2
 numpy
 pandas==1.3.5
 pandas_ta
