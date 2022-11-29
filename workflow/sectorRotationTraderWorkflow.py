@@ -1,13 +1,13 @@
 ''' this module supply standard arguments to call to catboostTradeAdvisor
      so user just need to provide high level like thresholds move (e.g. 10% in 7 days)
-    default stop loss def_stop_pct and focus_etf_list to get training results '''
+    default stop loss def_stop_pct and focus_tlist to get training results '''
 from datalib.catboostTradeAdvisor import catboostTradeAdvisor
 from backtest.chandelierExitBacktester import dlog
 from datalib.commonUtil import commonUtil as cu
 
 
 def get_dukas_fx_ticker_list()->tuple:
-    fx_tlist=['eurcad', 'gbpusd', 'nzdusd', 'audusd', 'audnzd', 'usdjpy', 'usdchf', 'usdcad',  'usdsgd', 'eurchf']
+    fx_tlist=['eurcad', 'gbpusd', 'nzdusd', 'audusd', 'audnzd', 'usdjpy', 'usdchf', 'usdcad',  'usdsgd', 'eurchf', 'eurusd']
     #feat_cols=['eurcad', 'audnzd', 'eurgbp', 'xauusd']
     feat_cols=['eurcad', 'audnzd', 'eurgbp', 'usdjpy', 'usdchf', 'usdcad', 'eurusd', 'xauusd']
     return fx_tlist, feat_cols
@@ -57,10 +57,10 @@ def get_jp_etf_list()->tuple:
 
     return etf_list, feat_cols
 
-def batch_sector_rotation_learning(rank_df, focus_etf_list=['CURE', 'TECL'], th=0.08, retrace_atr_multiple=2,
-            def_pct_stop=0.1, feat_cols=['TLT', 'RYE', 'RTM', 'EQAL'], rticker='SPY' ):
+def batch_sector_rotation_learning(rank_df, focus_tlist=['CURE', 'TECL'], th=0.08, retrace_atr_multiple=2,
+            def_pct_stop=0.1, feat_cols=['TLT', 'RYE', 'RTM', 'EQAL'], rticker='SPY', exclude_target_col=False ):
     """
-    using a time-series rank dataframe to predict movement of tickers in focus_etf_list
+    using a time-series rank dataframe to predict movement of tickers in focus_tlist
        a wrapper function called to gen_ticker_rank_catboost_results
     Keyword arguments:
         :DataFrame rank_df: return from heatmapUtil.py get_rel_nday_ma_zscore_heatmap
@@ -77,20 +77,22 @@ def batch_sector_rotation_learning(rank_df, focus_etf_list=['CURE', 'TECL'], th=
     table_list=[]
     all_trades_list=[]
     rpdf=cu.read_quote(rticker)
-    print('latest rpdf: %s ', rpdf.iloc[-1])
+    dlog('latest rpdf: %s ' %  rpdf.iloc[-1])
 
-    for t in focus_etf_list:
-        if t not in feat_cols:
-            if not t in rank_df.columns:
-                continue
-            print('now in test getting in batch sector ',t)
-            perf_df, trades_df=catboostTradeAdvisor.gen_ticker_rank_catboost_results(rank_df, retrace_atr_multiple=retrace_atr_multiple,
-                    focus_ticker=t, th=th, ex_atr_bars=20, feat_cols=feat_cols, def_pct_stop=def_pct_stop, rticker=rticker)
-            dlog(perf_df)
-            if not perf_df is None:
-                table_list.append(perf_df.T)
-            if not trades_df is None:
-                all_trades_list.append(trades_df)
+    for t in focus_tlist:
+        if t in feat_cols and exclude_target_col:
+            continue
+        if not t in rank_df.columns:
+            dlog('ticker {t} not in rank_df.columns:{rank_df.columns}, skip')
+            continue
+        dlog ('now in test getting in batch sector {t}')
+        perf_df, trades_df=catboostTradeAdvisor.gen_ticker_rank_catboost_results(rank_df, retrace_atr_multiple=retrace_atr_multiple,
+                focus_ticker=t, th=th, ex_atr_bars=20, feat_cols=feat_cols, def_pct_stop=def_pct_stop, rticker=rticker)
+        dlog(perf_df)
+        if not perf_df is None:
+            table_list.append(perf_df.T)
+        if not trades_df is None:
+            all_trades_list.append(trades_df)
     if len(table_list)>0:
         all_tb=pd.concat(table_list)
 
@@ -130,14 +132,14 @@ def get_bull_etf_tickers():
     bull_lev_etf_list=['SPXL', 'UDOW', 'BNKU', 'UPRO', 'UMDD', 'TMF', 'DRN', 'ERX', 'TNA', 'UCO', 'TECL', 'FAS', 'SOXL']
     return bull_lev_etf_list
 
-def run_bull_etf_test(th=0.1, focus_etf_list=None):
+def run_bull_etf_test(th=0.1, focus_tlist=None):
     '''
     th is the threshold to be passed to catboostTradeAdvisor for labelling
     '''
     import pandas as pd
-    if focus_etf_list is None:
-        focus_etf_list=get_bull_etf_tickers()
-    all_perf_table, all_trades_df= run_test(th=th, focus_etf_list=focus_etf_list)
+    if focus_tlist is None:
+        focus_tlist=get_bull_etf_tickers()
+    all_perf_table, all_trades_df= run_test(th=th, focus_tlist=focus_tlist)
     if not all_perf_table is None:
         review_perf(all_perf_table)
     dlog(pd.to_datetime('today'))
@@ -150,32 +152,35 @@ def get_bear_etf_tickers():
     bear_lev_etf_list=['SMDD', 'TECS', 'SDOW', 'EDZ', 'FAZ', 'BNKD', 'SOXS', 'TZA']
     return bear_lev_etf_list
 
-def run_bear_etf_test(th=0.1, focus_etf_list=None):
+def run_bear_etf_test(th=0.1, focus_tlist=None):
     '''
     th is the threshold to be passed to catboostTradeAdvisor for labelling
     '''
     import pandas as pd
-    if focus_etf_list is None:
-        focus_etf_list=get_bear_etf_tickers()
-    all_perf_table, all_trades_df= run_test(th=th, focus_etf_list=focus_etf_list)
+    if focus_tlist is None:
+        focus_tlist=get_bear_etf_tickers()
+    all_perf_table, all_trades_df= run_test(th=th, focus_tlist=focus_tlist)
     if not all_perf_table is None:
         review_perf(all_perf_table)
     return all_perf_table, all_trades_df
 
-def run_forex_worflow(pred_date=None, use_dukas=False):
+def run_forex_worflow(pred_date=None, use_dukas=False, focus_tlist=None):
     from datalib.heatmapUtil import get_rel_nday_ma_zscore_heatmap
     from datalib.commonUtil import commonUtil as cu   
 
     if use_dukas:
         fx_tlist, feat_cols= get_dukas_fx_ticker_list()
-        focus_etf_tlist=[ 'eurusd', 'eurchf', 'xauusd']
+        if focus_tlist is None:
+            focus_tlist=[ 'eurusd', 'usdjpy']
+        
         skip_cnt=6
         rticker='xauusd'
-        th=0.005
+        th=0.01
         def_pct_stop=0.02
     else:
         fx_tlist, feat_cols= get_fx_ticker_list()
-        focus_etf_tlist=['YCL', 'ULE']
+        if focus_tlist is None:
+           focus_tlist=['YCL', 'ULE']
         rticker='UUP'    
         skip_cnt=5
         cu.download_yf_quote(rticker)
@@ -186,15 +191,15 @@ def run_forex_worflow(pred_date=None, use_dukas=False):
     #update_data('fx_tlist')
     from datalib.commonUtil import commonUtil as cu
     
-    rank_df=get_rel_nday_ma_zscore_heatmap(fx_tlist+focus_etf_tlist, list_tag='rank_fx', use_rank=True, zdays=0, pred_date=pred_date, skip_cnt=skip_cnt)
+    rank_df=get_rel_nday_ma_zscore_heatmap(fx_tlist+focus_tlist, list_tag='rank_fx', use_rank=True, zdays=0, pred_date=pred_date, skip_cnt=skip_cnt)
     feat_cols=fx_tlist
     dlog(rank_df.tail())
-    all_perf_table, all_trades_df=batch_sector_rotation_learning(rank_df, focus_etf_list=focus_etf_tlist, th=th, rticker=rticker,
+    all_perf_table, all_trades_df=batch_sector_rotation_learning(rank_df, focus_tlist=focus_tlist, th=th, rticker=rticker,
                                                               def_pct_stop=def_pct_stop, feat_cols=feat_cols)
     return  all_perf_table, all_trades_df 
 
 
-def run_test(th=0.10,def_pct_stop=0.1, mkt='usa', focus_etf_list=['TMF'], rticker='SPY'):
+def run_test(th=0.10,def_pct_stop=0.1, mkt='usa', focus_tlist=['TMF'], rticker='SPY'):
     ''' run test for a group of target etf '''
     import pandas as pd
     from datalib.heatmapUtil import get_rel_nday_ma_zscore_heatmap
@@ -204,11 +209,11 @@ def run_test(th=0.10,def_pct_stop=0.1, mkt='usa', focus_etf_list=['TMF'], rticke
         sector_etf_list, feat_cols=get_us_etf_list()
     all_perf_table_list=[]
     all_trades_df_list=[]
-    for t in focus_etf_list:
+    for t in focus_tlist:
         tlist=list(set(sector_etf_list+[t]))
         rank_df=get_rel_nday_ma_zscore_heatmap(tlist, list_tag='rank_sector_etf', use_rank=True, zdays=0)
 
-        all_perf_table_bull, all_trades_df_bull=batch_sector_rotation_learning(rank_df, focus_etf_list=[t], th=th,
+        all_perf_table_bull, all_trades_df_bull=batch_sector_rotation_learning(rank_df, focus_tlist=[t], th=th,
                                                     def_pct_stop=def_pct_stop, feat_cols=feat_cols, rticker=rticker)
         if not all_perf_table_bull is None:
             dlog('all_perf_table_bull:')
@@ -224,7 +229,7 @@ def test(tlist=['TNA', 'UCO', 'FAS']):
     ''' testing workflow end to end'''
     #bull_lev_etf_list=['SPXL', 'UDOW', 'BNKU', 'UPRO', 'UMDD', 'TMF', 'DRN', 'ERX', 'TNA', 'UCO', 'TECL', 'FAS', 'SOXL', 'GUSH', 'BOIL', 'DUSL']
     #bull_lev_etf_list=['TNA', 'UCO', 'FAS']
-    all_perf_table_bull, all_trades_df_bull=run_test(th=0.10,def_pct_stop=0.1, focus_etf_list=tlist)
+    all_perf_table_bull, all_trades_df_bull=run_test(th=0.10,def_pct_stop=0.1, focus__list=tlist)
     return review_perf(all_perf_table_bull), all_trades_df_bull
 #test()
 def update_data(ticker_group='us_etf'):

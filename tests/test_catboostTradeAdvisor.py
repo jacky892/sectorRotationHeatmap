@@ -29,7 +29,7 @@ class TestClass(unittest.TestCase):
         th=0.1
         def_pct_stop=0.1
         focus_etf_tlist=['TMF', 'UCO']
-        all_perf_table_bull, all_trades_df_bull=batch_sector_rotation_learning(rank_df, focus_etf_list=focus_etf_tlist, th=th,  def_pct_stop=def_pct_stop, feat_cols=feat_cols)
+        all_perf_table_bull, all_trades_df_bull=batch_sector_rotation_learning(rank_df, focus_tlist=focus_etf_tlist, th=th,  def_pct_stop=def_pct_stop, feat_cols=feat_cols)
 
         all_perf_table_bull.to_csv('results/bull_perf.csv')
         all_trades_df_bull.to_csv('results/bull_trades.csv')
