@@ -35,7 +35,11 @@ class heatmapUtil:
             pw=pw_add+2
             new_df=(heat_df*(10**pw)).ffill().round()
             for c in new_df.columns:
-                new_df[c]=new_df[c].astype(int)
+                try:
+                    new_df[c]=new_df[c].astype(int)
+                except Exception as e:
+                    print('exception converting heatmap value to int ',e)
+                    continue
             return new_df
         if trim_date_columns:
             print('heat_df.columns:', heat_df.columns)
