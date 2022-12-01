@@ -1,3 +1,5 @@
+### 
+#
 '''
 run backtesting according to the signed entry bars using chandelier exit (recent high - n * ATR)
 required paramerters include threshold of N-bars movement (e.g. > 10% in 7 trading bars)
@@ -73,17 +75,7 @@ def add_3way_label(ndf, uplabel_col='_lb_7_bigrise', dnlabel_col='_lb_7_bigdrop'
     ndf[newcol]=y
     return ndf
 
-def get_signal_cross(signal_df, col1, col2):
-    '''
-    return Series +1 if col1 move up to cross col2, -1 otherwise
-    '''
-    if col2 not in signal_df.columns:
-        signal_df['_%s' % col2]=col2
-        col2='_%s' % col2
-    _=(signal_df[col1]-signal_df[col2])
-    cross=(_*_.shift(1)<0)*1
-    cross_sign=(_>0)*cross-(_<0)*cross
-    return cross_sign
+
 
 def get_long_max_drawdown_details(pdf, day_cnt=250, atr_bars=22, atr_multiple=4, plot=False)->dict:
     '''
@@ -524,16 +516,14 @@ class chandelierExitBacktester:
         int smooth_bars: rolling max for the output signal, so that the exist signal
                 remain high after the cross over, for use in breadth calcuation
         '''
-#        import talib
+        
         ret_df=pdf
         _high=pdf.High.rolling(atr_bars, min_periods=2).max().shift(1).bfill()
         _low=pdf.Low.rolling(int(atr_bars/2), min_periods=2).min().shift(1).bfill()
         if 'atr' in pdf.columns:
             atr=pdf['atr']
         else:
-            # function will add the ATR if not set,
             import pandas_ta
-#            atr=talib.ATR(pdf.High, pdf.Low, pdf.Close, atr_bars).shift(1)
             atr=pdf.ta.atr(atr_bars).shift(1)
             pdf['atr']=atr
             ret_df['atr']=atr
@@ -598,7 +588,8 @@ class chandelierExitBacktester:
         first_entry_date=entry_date_df['entry_date'].iloc[0]
 
         pdf['atr']=pdf.ta.atr(ex_atr_bars)
-        signame, _=chandelierExitBacktester.get_chandelier_long_exit_signal(pdf.loc[first_entry_date:].copy(), atr_bars=ex_atr_bars, def_pct_stop=def_pct_stop, retrace_atr_multiple=atr_multiple,  smooth_bars=smooth_bars, plot=plot)
+
+        signame, _=chandelierExitBacktester.get_chandelier_long_short_exit_signal(pdf.loc[first_entry_date:].copy(), trade_type=trade_type, atr_bars=ex_atr_bars, def_pct_stop=def_pct_stop, retrace_atr_multiple=atr_multiple,  smooth_bars=smooth_bars, plot=plot)
         exit_idx=_>0
         exit_cross=_[exit_idx]
 
@@ -810,3 +801,111 @@ class chandelierExitBacktester:
 
         label_cols=[x for x in ndf.columns if x[:3]=='_lb']
         return label_cols
+    
+    @staticmethod
+    def get_chandelier_long_short_exit_signal(pdf, atr_bars=22, trade_type='long', retrace_atr_multiple=4, def_pct_stop=0.1, smooth_bars=6, ret_details=False, plot=False):
+        '''
+        note that this function require the 'atr' column be set before passing in
+        Keyword Argruments:
+        DataFrame pdf: price_df from commonUtil.read_quote, need to have the atr columns set
+                before otherwise some nan value will appear in the start of the series
+        int retrace_atr_multiple: no of atr multiple retracement before exit
+        int smooth_bars: rolling max for the output signal, so that the exist signal
+                remain high after the cross over, for use in breadth calcuation
+        '''
+        if 'atr' in pdf.columns:
+            atr=pdf['atr'].bfill()
+        else:
+            import pandas_ta
+            atr=pdf.ta.atr(atr_bars).shift(1).bfill()
+            pdf['atr']=atr
+
+        ret_df=pdf
+        ret_df['atr']=atr        
+        ret_df['low']=pdf.Low
+        ret_df['high']=pdf.High       
+        ret_df['close']= pdf.Close
+        
+        if trade_type=='long':
+            rolling_ref=pdf.High.rolling(atr_bars, min_periods=2).max().shift(1).bfill()
+            ch_ex_h=rolling_ref-atr*retrace_atr_multiple
+            ch_ex_l=pdf.Low.rolling(2, min_periods=1).min().shift(2)
+            mdd_dict=get_long_max_drawdown_details(pdf,day_cnt=100, plot=plot)
+            ret_df['long_max_drawdown']=mdd_dict['mdd']
+            ret_df['ch_ex_h']=ch_ex_h
+            ret_df['ch_ex_l']=ch_ex_l
+            ret_df['exit_signal_atr']=ret_df.low<ch_ex_h
+            ret_df['exit_signal_prev_sup']=ret_df.low<ch_ex_l            
+            ret_df['chand_ex']=ret_df['exit_signal_atr']*ch_ex_h + ~ret_df['exit_signal_atr']*ch_ex_l
+            ret_df['exit_signal']=ret_df['low']<ret_df['chand_ex']
+            cols=['low', 'rolling_ref', 'chand_ex']
+            ret_df['pos_idx']=~(ret_df['exit_signal_prev_sup']+ret_df['exit_signal_atr'])
+            marker='v'
+            acolor='r'            
+            sig_col='low'
+            pos_color='lightgray'
+
+        else:
+            rolling_ref=pdf.Low.rolling(atr_bars, min_periods=2).min().shift(1).bfill()
+            ch_ex_l=rolling_ref+atr*retrace_atr_multiple
+            ch_ex_h=pdf.High.rolling(2, min_periods=1).max().shift(2)
+            mdd_dict=get_short_max_drawdown_details(pdf,day_cnt=100, plot=plot)
+            ret_df['short_max_drawdown']=mdd_dict['mdd']
+            ret_df['ch_ex_h']=ch_ex_h
+            ret_df['ch_ex_l']=ch_ex_l
+            ret_df['exit_signal_atr']=ret_df.high>ch_ex_h
+            ret_df['exit_signal_prev_sup']=ret_df.high>ch_ex_l            
+            ret_df['chand_ex']=ret_df['exit_signal_atr']*ch_ex_l + ~ret_df['exit_signal_atr']*ch_ex_h           
+            ret_df['exit_signal']=ret_df['high']>ret_df['chand_ex']
+            ret_df['pos_idx']=ret_df['chand_ex']>ret_df['high']
+            neg_idx=~ret_df['pos_idx']
+            cols=['high', 'rolling_ref', 'chand_ex']
+            sig_col=['high']
+            marker='^'
+            acolor='g'
+            pos_color='lightgreen'            
+
+        print('retrace_atr_multiple:',retrace_atr_multiple)
+        ret_df['rolling_ref']=rolling_ref
+        entry_price=pdf.Close.iloc[0]
+        ret_df[cols].plot(figsize=(10,8))
+
+        if plot:
+            plot_df=(ret_df[cols]).dropna()
+            if len(plot_df)>0:
+                ax=ret_df[cols].plot()
+                ret_df['rolling_ref'].plot(style='--', color='black')
+                bidx=ret_df['exit_signal'].dropna()>0
+                idx_list=list(ret_df[bidx].index)
+                dlog(plot_df)
+                dlog(f'idx_list {idx_list}')
+                ax.scatter(x=idx_list, y=plot_df.loc[idx_list][sig_col], marker=marker, s=180, color=acolor)
+                for idx in idx_list:
+#                    dlog(f'exit trade at {idx}', ret_df.loc[:idx].iloc[-5:])
+                    ax.axvline(idx)
+                bidx2=ret_df['pos_idx']>0
+                idx_list2=list(ret_df[bidx2].index)
+                print('idx_list2 len:',len(idx_list2))
+                for idx in idx_list2:
+                    ax.axvline(idx, color=pos_color, zorder=0)
+
+
+
+        if ret_details:
+            ret_df['exit_signal']=ret_df['exit_signal'].rolling(smooth_bars).max()
+            return 'ch_ex20d', ret_df
+        return 'ch_ex20d', ret_df['exit_signal'].rolling(smooth_bars).max()
+    
+def test():    
+    #%matplotlib inline
+    ticker='ARKK'
+    cu.download_quote(ticker)
+    pdf=cu.read_quote(ticker)
+    pdf=pdf.iloc[-550:-250]
+    chandelierExitBacktester.get_chandelier_long_short_exit_signal(pdf, trade_type='long', plot=True)
+    pdf=pdf.iloc[-250:]
+    pdf=pdf.iloc[-250:]
+    chandelierExitBacktester.get_chandelier_long_short_exit_signal(pdf, trade_type='short', plot=True, retrace_atr_multiple=3)
+    
+if __name__=='__main__':
+    test()    

@@ -48,7 +48,7 @@ class TestClass(unittest.TestCase):
         print(mdd_dict['mdd'])
         assert('mdd_exceeded' in mdd_dict.keys())
         assert('mdd' in mdd_dict.keys())
-        assert(mdd_dict['mdd'] <-0.1)
+        assert(mdd_dict['mdd'] <-0.01)
         ret_ser=mdd_dict['ret_ser']
         bidx=ret_ser>0.05
 

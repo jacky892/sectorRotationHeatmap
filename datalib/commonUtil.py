@@ -9,7 +9,7 @@ def is_fx_ticker(ticker):
 def read_duka_dl(ticker='cadjpy'):   
     import pandas as pd
     today=pd.to_datetime('today').strftime('%Y-%m-%d')  
-    today_28ago=pd.to_datetime('today')-pd.to_timedelta('28 days')
+    today_28ago=pd.to_datetime('today')-pd.to_timedelta('80  days')
     today_28ago_str=today_28ago.strftime('%Y-%m-%d')
     cmd=f'npx dukascopy-node -i {ticker} -from {today_28ago_str} -to {today} -t h4 -f csv'
     import sys 
@@ -26,6 +26,7 @@ def read_duka_dl(ticker='cadjpy'):
 
 def load_dukas_df(fname):
     import pandas as pd
+    import random
     df2=pd.read_csv(fname)                                                                                                                      
     import datetime               
     df2['Date']=df2.timestamp.apply(lambda x:datetime.datetime.fromtimestamp(x/1000))
@@ -35,8 +36,10 @@ def load_dukas_df(fname):
     rename_dict['high']='High'
     rename_dict['low']='Low'
     rename_dict['close']='Close'
-    df2.rename(rename_dict, inplace=True, axis=1)
 
+    df2.rename(rename_dict, inplace=True, axis=1)
+    df2['Volume']=10
+    df2['Volume']=df2.Volume.apply(lambda x:x+random.randint(0,5))
     return df2
 
 def clean_old_fx_download():
@@ -53,12 +56,11 @@ def read_fx_quote(ticker, pred_date=None):
     import glob
     fname=f'download/{ticker}-h4-bid-2022-11-11-2022-11-25.csv'
 
-    if not os.path.exists(fname):
-        flist=glob.glob(f'download/{ticker}*.csv')
-        if len(flist)>0:
-            fname=flist[0]
-        else:
-            fname=read_duka_dl(ticker)
+    flist=glob.glob(f'download/{ticker}*.csv')
+    if len(flist)>0:
+        fname=flist[0]
+    else:
+        fname=read_duka_dl(ticker)
     df=load_dukas_df(fname)
     if pred_date is None:
         return df
@@ -116,6 +118,20 @@ class commonUtil:
             ret=commonUtil.download_yf_quote(ticker)
         return ret
 
+    @staticmethod
+    def getProp(key):
+        key_dict={}
+        key_dict['dataroot']='/Users/jackylee/optiondata'
+        key_dict['enable_static_cache']=False
+    #    key_dict['dataroot']='local_dataroot/optiondata'
+        key_dict['gwip']='192.168.8.101'
+        key_dict['rqip']='192.168.8.112'
+        key_dict['nfsip']='192.168.8.112'
+        if key is None:
+            return key_dict
+        if not key in key_dict.keys():
+            return None
+        return  key_dict[key]
 
     @staticmethod
     def download_yf_quote(ticker):
