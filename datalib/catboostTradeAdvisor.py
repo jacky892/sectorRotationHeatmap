@@ -52,38 +52,38 @@ def simple_xgboost_learner(ticker, feats_df, feat_cols, target_col, th=-0.05, te
     import numpy as np
     import xgboost
     from sklearn import metrics
-    dlog(f'{longshort} {ticker} at cat boost:{feats_df.tail()}')
+    dlog(f'{longshort} {ticker} at cat boost:{feats_df.tail(2)}')
     split_dict=split_data_classifier(feats_df,  feat_cols, target_col, th=th, test_sample_cnt=test_sample_cnt)
 
     train_x=split_dict['X_train']
     train_y=split_dict['y_train']
     test_x=split_dict['X_test']
     test_y=split_dict['y_test']
-    print('test_y desc',test_y.describe())
-    print('train_y desc',train_y.describe())
+    dlog('test_y desc',test_y.describe())
+#    dlog('train_y desc',train_y.describe())
 
     import xgboost
     missing=float('nan')
     from xgboost import XGBClassifier
     n_estimators=100
     max_depth=5 
-    model = XGBClassifier(learning_rate=0.001, n_estimators=n_estimators, max_depth=max_depth, scale_pos_weight=6)
+    model = XGBClassifier(learning_rate=0.001, n_estimators=n_estimators, max_depth=max_depth, scale_pos_weight=6, objective='binary:logistic', eval_metric='error')
 
     model.fit(train_x, train_y)
 
     plst = list(param.items())+[('eval_metric', 'ams@0.15')]
 
     num_round = 200
-    print ('loading data end, start to boost trees')
-    print('model:', model, model.get_booster().get_fscore())
+    dlog('loading data end, start to boost trees')
+    dlog('model:', model, model.get_booster().get_fscore())
     unique_y=list(set(train_y))
     dlog(f'unique_y: {unique_y, train_y.shape, test_y.shape, test_x.shape}')
     model_best_iteration=model.get_booster().best_iteration
     y_pred = model.predict(test_x)
     
-    print('pred 1is ', y_pred, len(y_pred))
+    dlog('pred 1 is %s %s ' % ( y_pred[-10:], len(y_pred)))
     pred_flag = [round(value) for value in y_pred]
-    print('pred fixed is ', pred_flag, len(pred_flag))
+    dlog('pred fixed is %s %s ' % (pred_flag[-10:], len(pred_flag)))
     score1=metrics.accuracy_score(test_y, pred_flag)
     score2=metrics.confusion_matrix(test_y, pred_flag)
     score3=metrics.classification_report(test_y, pred_flag)
@@ -98,25 +98,25 @@ def simple_xgboost_learner(ticker, feats_df, feat_cols, target_col, th=-0.05, te
         test_classes_name=['True', 'False']
     dlog(f'test_classes_names: names, dict, ilist {test_classes_name, classes_dict_nways, iclasses, iclasses_t}')
     cfm_fname='tmp/a.jpg'
-    dlog(f'scores {score1, feat_cols}')
+#    dlog(f'scores {score1, feat_cols}')
     dlog(f'score2:{score2}')
     dlog(f'report {score3}'.replace('report', 're') )
     from sklearn.metrics import precision_recall_fscore_support
     precision, recall, f1, support= precision_recall_fscore_support(test_y, pred_flag)
     #dlog(f'precision:{precision}, {recall}, {f1}, {best_iteration}, {support} ')
     rel_cols=feat_cols
-    print(dir(model))
     feature_importances=model.feature_importances_
     rf_importances = pd.DataFrame({'name':rel_cols[:len(feature_importances)],
                                         'imp_val':feature_importances
                                           }).sort_values(by='imp_val',
                                            ascending=False).reset_index(drop=True)
-    dlog(rf_importances)
+    dlog(rf_importances.head(5))
     dlog(' pred_flag:',)
     ret_df=pd.DataFrame()
     ret_df['y']=test_y
     ret_df['pred_y']=pred_flag
-    dlog(ret_df)
+#    dlog(ret_df)
+#    dlog(pred_flag.tail(5))
     ret_dict=defaultdict()
     ret_dict['rf_importances']=rf_importances
     ret_dict['score1']=score1
@@ -227,7 +227,7 @@ def simple_catboost_learner(ticker, feats_df, feat_cols, target_col, th=-0.05, t
         test_classes_name=['True', 'False']
     dlog(f'test_classes_names: names, dict, ilist {test_classes_name, classes_dict_nways, iclasses, iclasses_t}')
     cfm_fname='tmp/a.jpg'
-    dlog(f'scores {score1, feat_cols}')
+#    dlog(f'scores {score1, feat_cols}')
     dlog(f'score2:{score2}')
     dlog(f'report {score3}'.replace('report', 're') )
     from sklearn.metrics import precision_recall_fscore_support
@@ -238,12 +238,12 @@ def simple_catboost_learner(ticker, feats_df, feat_cols, target_col, th=-0.05, t
                                         'imp_val':model.feature_importances_
                                           }).sort_values(by='imp_val',
                                            ascending=False).reset_index(drop=True)
-    dlog(rf_importances)
+    dlog(rf_importances.head(5))
     dlog(' pred_flag:',)
     ret_df=pd.DataFrame()
     ret_df['y']=test_y
     ret_df['pred_y']=pred_flag
-    dlog(ret_df)
+    dlog(ret_df.tail())
     ret_dict=defaultdict()
     ret_dict['rf_importances']=rf_importances
     ret_dict['score1']=score1
@@ -274,7 +274,7 @@ class catboostTradeAdvisor:
     def learn_from_sector_matrix_df(rank_df, focus_ticker='QQQ', feat_cols=['TLT', 'XLV'], pred_bars=7,
             threshold=0.1, retrace_atr_multiple=3, ex_atr_bars=20, def_pct_stop=0.1, test_sample_cnt=80, rticker='SPY'):
         '''
-        wrapper function called to gen_ticker_rank_catboost_results, add labels and then call simple_catboost_learner
+        wrapper function called by gen_ticker_rank_catboost_results for add labels and then call simple_catboost_learner
         Keyword arguments:
             :DataFrame rank_df: return from heatmapUtil.py get_rel_nday_ma_zscore_heatmap
             :str focus_ticker: the ticker whose return will be used for labeling, say > threshold movement in 7 days
@@ -298,7 +298,10 @@ class catboostTradeAdvisor:
         pdf=cu.read_quote(focus_ticker)
         bars=pred_bars
         label_cols=backtester.add_labels_by_bars(pdf, bars=bars, threshold=threshold)
-        dlog(f'possible target cols: {label_cols}')
+        if label_cols is None:
+            return "insufficent data"
+
+#        dlog(f'possible target cols: {label_cols}')
         ndf=ret_df.merge(pdf, left_index=True, right_index=True)
         dlog(f'label cols:{label_cols}')
         feat_cols=[col for col in ndf.columns if col[:2]=='i_']
@@ -311,10 +314,10 @@ class catboostTradeAdvisor:
     #        x=simple_catboost_learner(focus_ticker, ndf, feat_cols, target_col, th=[-threshold, threshold], test_sample_cnt=test_sample_cnt, param={})
     #        dlog(f'bt dict keys:{x.keys()}')
     #        all_ret_dict[target_col]=x
-        target_cols=[  f'_lb_{bars}_spikeup' , f'_lb_{bars}_bigrise' ,]
+        target_cols=[  f'_lb_{bars}_spikeup' , f'_lb_{bars}_bigrise' , f'_lb_{bars}_bigdrop' ]
         use_catboost=check_catboost_installed()
         use_catboost=False
-        print(f'before bt rticker:{rticker}')
+        dlog(f'before bt rticker:{rticker}')
         for target_col in target_cols:
             if not use_catboost:
                 x=simple_xgboost_learner(focus_ticker, ndf, feat_cols, target_col, th=threshold, test_sample_cnt=test_sample_cnt, param={})
@@ -334,6 +337,7 @@ class catboostTradeAdvisor:
             if ret_dict is None:
                 continue
             ret_df=ret_dict['pred_df']
+            pred_df1=ret_df
             cfmatrix=ret_dict['cfm_fname']
             rf_importances=pd.DataFrame()
             if 'rf_importances' in ret_dict:
@@ -341,11 +345,13 @@ class catboostTradeAdvisor:
             model_best_iteration=-1
             img_list.append(cfmatrix)
             ret_df_list.append(ret_df)
-            pred_df1=ret_df
             longshort='long'
             if 'down' in lb_key or 'drop' in lb_key:
                 longshort='short'
             signame=f'catboost.{lb_key}.{longshort}'
+            pred_df1['signame']=signame
+            pred_df1['longshort']=longshort
+            pred_df1['ticker']=focus_ticker
             bt_dict=backtester.add_backtest_from_pred_df(focus_ticker, pred_df1, pred_col='pred_y', rticker=rticker,
                          trade_type=longshort, signame=signame, retrace_atr_multiple=retrace_atr_multiple, def_pct_stop=def_pct_stop)
             pred_df1.to_csv(f'results/{focus_ticker}.{signame}.pred.csv')
@@ -355,6 +361,7 @@ class catboostTradeAdvisor:
             if bt_dict['trades_df'] is None:
                 continue
             bt_dict['trades_df'].to_csv(f'results/{focus_ticker}.{signame}.trades.csv')
+            bt_dict['pred_df']=pred_df1
             bt_dict['signame']=signame
             if 'model_best_iteration' in  ret_dict.keys():
                 model_best_iteration=ret_dict['model_best_iteration']
@@ -379,6 +386,8 @@ class catboostTradeAdvisor:
         rank_cols.append(focus_ticker)
         test_sample_cnt=int(len(rank_df)*0.2)
         ret_dict=catboostTradeAdvisor.learn_from_sector_matrix_df(rank_df, focus_ticker=focus_ticker, feat_cols=rank_cols, threshold=th, retrace_atr_multiple=retrace_atr_multiple, ex_atr_bars=ex_atr_bars, def_pct_stop=def_pct_stop, rticker=rticker, test_sample_cnt=test_sample_cnt)
+        if type(ret_dict)==type(''): # return error message
+            return None, None, ret_dict            
         dlog(f'{focus_ticker} results:', ret_dict.keys())
         def get_simple_dict_field(big_dict):
             import pandas as pd
@@ -388,7 +397,9 @@ class catboostTradeAdvisor:
                     new_dict[k]=v
             return new_dict
 
+#        pred_df=ret_dict['pred_df']
         all_row_dict=defaultdict()
+        all_pred_df_list=[]
         all_trades_df_list=[]
         all_perf_table=None
         all_trades_df=None
@@ -397,6 +408,8 @@ class catboostTradeAdvisor:
                 continue
             big_dict=v['all_tradesummary']
             trades_df=v['trades_df']
+            pred_df=v['pred_df']
+            all_pred_df_list.append(pred_df)
             all_trades_df_list.append(trades_df)
             row_dict=get_simple_dict_field(big_dict)
             all_row_dict[f'{focus_ticker}.{k}']=row_dict
@@ -404,4 +417,6 @@ class catboostTradeAdvisor:
             all_perf_table=pd.DataFrame(all_row_dict)
         if len(all_trades_df_list)>0:
             all_trades_df=pd.concat(all_trades_df_list)
-        return all_perf_table, all_trades_df
+        if len(all_pred_df_list)>0:
+            all_pred_df=pd.concat(all_pred_df_list)
+        return all_perf_table, all_trades_df, all_pred_df

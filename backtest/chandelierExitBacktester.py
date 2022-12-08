@@ -556,8 +556,8 @@ class chandelierExitBacktester:
                 ax=ret_df[sub_cols].plot()
                 bidx=ret_df['exit_signal'].dropna()>0
                 idx_list=list(ret_df[bidx].index)
-                dlog(plot_df)
-                dlog(f'idx_list {idx_list}')
+                #dlog(plot_df)
+                #dlog(f'idx_list {idx_list}')
                 ax.scatter(x=idx_list, y=plot_df.loc[idx_list].low, marker='^', s=180, color='g')
                 ax.scatter(x=idx_list, y=plot_df.loc[idx_list].low, marker='^', s=180, color='g')
                 for idx in idx_list:
@@ -582,7 +582,7 @@ class chandelierExitBacktester:
         data_rows=defaultdict()
 
 #        ret_df=pd.DataFrame()
-        dlog(f'entry_date_df columns:{entry_date_df.columns}')
+#        dlog(f'entry_date_df columns:{entry_date_df.columns}')
         if 'entry_date' not in entry_date_df.columns:
             entry_date_df['entry_date']=entry_date_df['signal_date'].apply(lambda x:get_next_day(x, pdf))
         first_entry_date=entry_date_df['entry_date'].iloc[0]
@@ -723,7 +723,7 @@ class chandelierExitBacktester:
             rprice_df=cu.read_quote(rticker)
 
         trades_df=backtest_from_tradedates_df(tradedates_df, price_df, rprice_df, trade_type=trade_type)
-        dlog(f'trades_df cols {trades_df.columns, trades_df.shape}')
+#        dlog(f'trades_df cols {trades_df.columns, trades_df.shape}')
         if len(trades_df)==0:
             return None, None
         trades_df['ticker_']=ticker
@@ -779,6 +779,10 @@ class chandelierExitBacktester:
         spikeup mean reached threshold at least once,
         bigrise mean still above threshold after x bars
         '''
+        if len(ndf)<100:
+            dlog('insufficent data')
+            return None
+
         fieldname='_n_ret%s' % bars
         ndf[fieldname]=(ndf.Close.shift(-bars)-ndf.Close)/ndf.Close
         ndf[f'_lb_{bars}_bigrise']=ndf[fieldname]>threshold
@@ -790,6 +794,7 @@ class chandelierExitBacktester:
         high_fieldname=f'_n_{bars}d_high'
         ndf[low_fieldname]=ndf.Low.shift(-bars).rolling(window=(bars),min_periods=3).min()
         ndf[high_fieldname]=ndf.High.shift(-bars).rolling(window=(bars),min_periods=3).max()
+#        dlog(f'low vs high file:{low_fieldname}, {high_fieldname}', ndf.tail())
         ndf[f'_lb_{bars}_spikedown']=ndf.eval(f'(Close  - {low_fieldname})/Close')>threshold
         ndf[f'_lb_{bars}_spikedown']=ndf[f'_lb_{bars}_spikedown']*1
         ndf[f'_lb_{bars}_spikeup']=ndf.eval(f'({high_fieldname}-Close)/Close')>threshold
@@ -865,7 +870,6 @@ class chandelierExitBacktester:
             acolor='g'
             pos_color='lightgreen'            
 
-        print('retrace_atr_multiple:',retrace_atr_multiple)
         ret_df['rolling_ref']=rolling_ref
         entry_price=pdf.Close.iloc[0]
         ret_df[cols].plot(figsize=(10,8))
@@ -877,8 +881,8 @@ class chandelierExitBacktester:
                 ret_df['rolling_ref'].plot(style='--', color='black')
                 bidx=ret_df['exit_signal'].dropna()>0
                 idx_list=list(ret_df[bidx].index)
-                dlog(plot_df)
-                dlog(f'idx_list {idx_list}')
+                #dlog(plot_df)
+                #dlog(f'idx_list {idx_list}')
                 ax.scatter(x=idx_list, y=plot_df.loc[idx_list][sig_col], marker=marker, s=180, color=acolor)
                 for idx in idx_list:
 #                    dlog(f'exit trade at {idx}', ret_df.loc[:idx].iloc[-5:])

@@ -14,13 +14,13 @@ def get_dukas_fx_ticker_list()->tuple:
 
 def get_fx_ticker_list()->tuple:
     fx_tlist=['EURUSD=X', 'GBPUSD=X', 'NZDUSD=X', 'AUDUSD=X', 'AUDNZD=X', 'USDJPY=X', 'USDCHF=X', 'USDCAD=X',  'USDSGD=x']
-    feat_cols=['EUO', 'ULE', 'YCS', 'YCL']
+    feat_cols=['EURUSD=X', 'GBPUSD=X', 'USDJPY=X', 'AUDUSD=X', 'USDCHF=X']
     return fx_tlist, feat_cols
 
 def get_us_etf_list()->tuple:
     #    ew_sector_etf_list=['RCD', 'RYH', 'RYT', 'RGI', 'RHS', 'RTM', 'RYF', 'ROOF', 'RSP', 'RYE', 'EQAL', 'EWRE', 'QQEW', 'XBI', 'XAR', 'ROBO','TLT', 'EMLC', 'EEM', 'CURE', 'VXX', 'REM']
     ew_sector_etf_list=['RCD', 'RYH', 'RYT', 'RGI', 'RHS', 'RTM', 'RYF', 'RSP', 'RYE', 'RYU', 'EQAL', 'EWRE', 'QQEW', 'TLT', 'EMLC', 'EEM', 'SPY']
-    feat_cols=['TLT', 'EQAL', 'RYF', 'EMLC', 'EWRE', 'RTM', 'RYE', 'EEM', 'RYT', 'RYU', 'RHS', 'TMF', 'YCL', 'ULE', 'FAS']
+    feat_cols=['TLT', 'EQAL', 'RYF', 'EMLC', 'EWRE', 'RTM', 'RYE', 'EEM', 'RYT', 'RYU', 'RHS', 'TMF' ]
     return ew_sector_etf_list, feat_cols
 
 def get_jp_etf_list()->tuple:
@@ -76,6 +76,7 @@ def batch_sector_rotation_learning(rank_df, focus_tlist=['CURE', 'TECL'], th=0.0
     import pandas as pd
     table_list=[]
     all_trades_list=[]
+    all_pred_list=[]
     rpdf=cu.read_quote(rticker)
     dlog('latest rpdf: %s ' %  rpdf.iloc[-1])
 
@@ -83,23 +84,29 @@ def batch_sector_rotation_learning(rank_df, focus_tlist=['CURE', 'TECL'], th=0.0
         if t in feat_cols and exclude_target_col:
             continue
         if not t in rank_df.columns:
-            dlog('ticker {t} not in rank_df.columns:{rank_df.columns}, skip')
+            dlog(f'ticker {t} not in rank_df.columns:{rank_df.columns}, skip')
             continue
-        dlog ('now in test getting in batch sector {t}')
-        perf_df, trades_df=catboostTradeAdvisor.gen_ticker_rank_catboost_results(rank_df, retrace_atr_multiple=retrace_atr_multiple,
+        dlog (f'now in test getting in batch sector {t}')
+        perf_df, trades_df, pred_df=catboostTradeAdvisor.gen_ticker_rank_catboost_results(rank_df, retrace_atr_multiple=retrace_atr_multiple,
                 focus_ticker=t, th=th, ex_atr_bars=20, feat_cols=feat_cols, def_pct_stop=def_pct_stop, rticker=rticker)
+        if perf_df is None:
+            return None, None, None
+            
         dlog(perf_df)
         if not perf_df is None:
             table_list.append(perf_df.T)
         if not trades_df is None:
             all_trades_list.append(trades_df)
+        if not pred_df is None:
+            all_pred_list.append(pred_df)
     if len(table_list)>0:
         all_tb=pd.concat(table_list)
 
         all_trades_df=pd.concat(all_trades_list)
-        return all_tb, all_trades_df
+        all_pred_df=pd.concat(all_pred_list)
+        return all_tb, all_trades_df, all_pred_df
     else:
-        return None, None
+        return None, None, None
 
 def review_perf(all_perf_table):
     '''
@@ -164,7 +171,7 @@ def run_bear_etf_test(th=0.1, focus_tlist=None):
         review_perf(all_perf_table)
     return all_perf_table, all_trades_df
 
-def run_forex_worflow(pred_date=None, use_dukas=False, focus_tlist=None):
+def run_forex_worflow(pred_date=None, use_dukas=False, focus_tlist=None, heatmap_fname='dfx_hm.jpg'):
     from datalib.heatmapUtil import get_rel_nday_ma_zscore_heatmap
     from datalib.commonUtil import commonUtil as cu   
 
@@ -194,12 +201,12 @@ def run_forex_worflow(pred_date=None, use_dukas=False, focus_tlist=None):
     rank_df=get_rel_nday_ma_zscore_heatmap(fx_tlist+focus_tlist, list_tag='rank_fx', use_rank=True, zdays=0, pred_date=pred_date, skip_cnt=skip_cnt)
     feat_cols=fx_tlist
     dlog(rank_df.tail())
-    all_perf_table, all_trades_df=batch_sector_rotation_learning(rank_df, focus_tlist=focus_tlist, th=th, rticker=rticker,
+    all_perf_table, all_trades_df, pred_df=batch_sector_rotation_learning(rank_df, focus_tlist=focus_tlist, th=th, rticker=rticker,
                                                               def_pct_stop=def_pct_stop, feat_cols=feat_cols)
-    return  all_perf_table, all_trades_df 
+    return  all_perf_table, all_trades_df, pred_df 
 
 
-def run_test(th=0.10,def_pct_stop=0.1, mkt='usa', focus_tlist=['TMF'], rticker='SPY'):
+def run_etf_test(th=0.10,def_pct_stop=0.1, mkt='usa', focus_tlist=['TMF'], rticker='SPY', heatmap_fname='yf_hm.jpg'):
     ''' run test for a group of target etf '''
     import pandas as pd
     from datalib.heatmapUtil import get_rel_nday_ma_zscore_heatmap
@@ -213,7 +220,7 @@ def run_test(th=0.10,def_pct_stop=0.1, mkt='usa', focus_tlist=['TMF'], rticker='
         tlist=list(set(sector_etf_list+[t]))
         rank_df=get_rel_nday_ma_zscore_heatmap(tlist, list_tag='rank_sector_etf', use_rank=True, zdays=0)
 
-        all_perf_table_bull, all_trades_df_bull=batch_sector_rotation_learning(rank_df, focus_tlist=[t], th=th,
+        all_perf_table_bull, all_trades_df_bull, pred_df=batch_sector_rotation_learning(rank_df, focus_tlist=[t], th=th,
                                                     def_pct_stop=def_pct_stop, feat_cols=feat_cols, rticker=rticker)
         if not all_perf_table_bull is None:
             dlog('all_perf_table_bull:')
@@ -223,7 +230,67 @@ def run_test(th=0.10,def_pct_stop=0.1, mkt='usa', focus_tlist=['TMF'], rticker='
     if len(all_perf_table_list)>0:
         all_perf_table=pd.concat(all_perf_table_list)
         return all_perf_table, pd.concat(all_trades_df_list)
-    return None, None
+    return None, None, None
+
+def extract_pred_table_for_sector_rotation(all_pred_df, ticker):
+    import pandas as pd
+    all_pred_df['date']=all_pred_df.index
+    if 'y' in all_pred_df.columns:
+        all_pred_df.drop('y', axis=1, inplace=True)
+    td=pd.to_timedelta('5 days')
+    ts=pd.to_datetime('now')
+    ts2=ts-td
+    bidx=all_pred_df['date']>ts2
+    _send_df=all_pred_df[bidx].query('pred_y>0')
+    if len(_send_df)==0:
+        return None, f'no suggestion for ticker {ticker}'
+    import dataframe_image as dfi
+    ofname=f'{ticker}_pred_df.jpg'
+    dfi.export(_send_df, ofname)
+    return _send_df, ofname
+
+
+def run_chatbot_sector_pred_for_ticker(focus_ticker):
+    from datalib.heatmapUtil import get_rel_nday_ma_zscore_heatmap
+    from workflow.sectorRotationTraderWorkflow import batch_sector_rotation_learning
+    from backtest.chandelierExitBacktester import chandelierExitBacktester, backtest_between, get_long_max_drawdown_details
+    from datalib.commonUtil import commonUtil as cu
+    import pandas as pd
+    import pandas_ta as ta
+    ew_sector_etf_list=['RCD', 'RYH', 'RYT', 'RGI', 'RHS', 'RTM', 'RYF', 'RSP', 'RYE', 'RYU', 'EQAL', 'EWRE', 'QQEW', 'TLT', 'EMLC', 'EEM' ]
+    feat_cols=['TLT', 'EQAL', 'RYF', 'EMLC', 'EWRE', 'RTM', 'RYE', 'EEM', 'RYT', 'RYU', 'RHS']  
+    
+    tlist=ew_sector_etf_list.copy()
+    tlist.append(focus_ticker)
+    
+    th=0.05
+    def_pct_stop=0.05
+    rticker='IWV'
+    cu.download_yf_quote(rticker)
+    feat_cols.append(focus_ticker)
+    feat_cols=list(set(feat_cols))
+    focus_tlist=[focus_ticker]    
+#    cu.download_yf_quote(rticker)    
+    for t in list(set(feat_cols+ew_sector_etf_list+focus_tlist)):
+        cu.download_yf_quote(t)
+    rank_df=get_rel_nday_ma_zscore_heatmap(tlist, list_tag='rank_sector_etf', use_rank=True, zdays=0, pred_date=None, imgofname='xhm.jpg')
+
+    #feat_cols=fx_tlist
+    print(rank_df.tail())
+    all_perf_table, all_trades_df, all_pred_df=batch_sector_rotation_learning(rank_df, focus_tlist=focus_tlist, th=th, rticker=rticker,
+                                                              def_pct_stop=def_pct_stop, feat_cols=feat_cols)
+    all_perf_table, all_trades_df, all_pred_df
+    return all_perf_table, all_trades_df, all_pred_df
+
+class sectorRotationTraderWorkflow:
+    @staticmethod
+    def run_chatbot_sector_pred_for_ticker(focus_ticker):
+        return  run_chatbot_sector_pred_for_ticker(focus_ticker)
+
+    @staticmethod
+    def extract_pred_table_for_sector_rotation(all_pred_df, ticker):
+        return extract_pred_table_for_sector_rotation(all_pred_df, ticker)
+
 
 def test(tlist=['TNA', 'UCO', 'FAS']):
     ''' testing workflow end to end'''
@@ -246,3 +313,6 @@ def update_data(ticker_group='us_etf'):
         else:
             print(f'download using npx dukascopy for {ticker}')
             cu.download_quote(ticker)
+
+
+
