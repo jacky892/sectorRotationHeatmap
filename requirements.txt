@@ -45,5 +45,5 @@ yfinance==0.1.63
 #TA-Lib
 cryptocmd
 dataframe_image
-inja2==3.0.3
+jinja2==3.0.3
 nbconvert==6.4.4
