@@ -5,12 +5,24 @@ from datalib.catboostTradeAdvisor import catboostTradeAdvisor
 from backtest.chandelierExitBacktester import dlog
 from datalib.commonUtil import commonUtil as cu
 
+def get_cmc_crypto_tlist()->tuple:
+    tlist=['BTC', 'ETH', 'BNB', 'XRP', 'DOGE', 'BUSD', 'USDT', 'ADA', 'MATIC', 'DOT', 'LTC', 'SHIB', 'SOL']
+    fx_tlist=[f'{c}=C' for c in tlist]
+    feat_cols=fx_tlist[:5]
+    return fx_tlist, feat_cols
 
 def get_dukas_fx_ticker_list()->tuple:
     fx_tlist=['eurcad', 'gbpusd', 'nzdusd', 'audusd', 'audnzd', 'usdjpy', 'usdchf', 'usdcad',  'usdsgd', 'eurchf', 'eurusd']
     #feat_cols=['eurcad', 'audnzd', 'eurgbp', 'xauusd']
     feat_cols=['eurcad', 'audnzd', 'eurgbp', 'usdjpy', 'usdchf', 'usdcad', 'eurusd', 'xauusd']
     return fx_tlist, feat_cols
+
+def get_lev_etf_list()->tuple:
+    import random 
+    bull_lev_etf_list=['SPXL', 'UDOW', 'BNKU', 'UPRO', 'UMDD', 'TMF', 'DRN', 'ERX', 'TNA', 'UCO', 'TECL', 'FAS', 'SOXL', 'YCL', 'ULE']
+    bear_lev_etf_list=['SMDD', 'TECS', 'SDOW', 'EDZ', 'FAZ', 'BNKD', 'SOXS', 'TZA']
+    lev_etf=list(set(bull_lev_etf_list+bear_lev_etf_list))
+    return lev_etf, random.sample(lev_etf, 8)
 
 def get_fx_ticker_list()->tuple:
     fx_tlist=['EURUSD=X', 'GBPUSD=X', 'NZDUSD=X', 'AUDUSD=X', 'AUDNZD=X', 'USDJPY=X', 'USDCHF=X', 'USDCAD=X',  'USDSGD=x']
@@ -136,7 +148,7 @@ def get_bull_etf_tickers():
     '''
     return default list of bull etf
     '''
-    bull_lev_etf_list=['SPXL', 'UDOW', 'BNKU', 'UPRO', 'UMDD', 'TMF', 'DRN', 'ERX', 'TNA', 'UCO', 'TECL', 'FAS', 'SOXL']
+    bull_lev_etf_list=['SPXL', 'UDOW', 'BNKU', 'UPRO', 'UMDD', 'TMF', 'DRN', 'ERX', 'TNA', 'UCO', 'TECL', 'FAS', 'SOXL', 'YCL']
     return bull_lev_etf_list
 
 def run_bull_etf_test(th=0.1, focus_tlist=None):
@@ -204,6 +216,37 @@ def run_forex_worflow(pred_date=None, use_dukas=False, focus_tlist=None, heatmap
     all_perf_table, all_trades_df, pred_df=batch_sector_rotation_learning(rank_df, focus_tlist=focus_tlist, th=th, rticker=rticker,
                                                               def_pct_stop=def_pct_stop, feat_cols=feat_cols)
     return  all_perf_table, all_trades_df, pred_df 
+
+def run_cmc_crypto_worflow(pred_date='20221020', update_data=False):
+    from datalib.heatmapUtil import get_rel_nday_ma_zscore_heatmap
+    from workflow.sectorRotationTraderWorkflow import  get_fx_ticker_list, batch_sector_rotation_learning
+    from backtest.chandelierExitBacktester import chandelierExitBacktester, backtest_between, get_long_max_drawdown_details
+    from datalib.commonUtil import commonUtil as cu
+    import pandas as pd
+    import pandas_ta as ta
+    
+    import random
+
+    feat_cols=list(set(['BTC=C', 'ETH=C'] + list(random.sample(fx_tlist, 3))))
+    feat_cols, fx_tlist
+    if update_data:
+        for t in fx_tlist:
+            cu.download_quote(t)
+
+    focus_etf_tlist=['ETH=C']
+    from workflow.sectorRotationTraderWorkflow import update_data
+    from datalib.commonUtil import commonUtil as cu
+    rticker='USDT=C'
+    cu.download_quote(rticker)
+    rank_df=get_rel_nday_ma_zscore_heatmap(fx_tlist+focus_etf_tlist, list_tag='rank_fx', use_rank=True, zdays=0, pred_date=pred_date)
+    th=0.1
+    def_pct_stop=0.05
+    feat_cols=fx_tlist
+    all_perf_table, all_trades_df, pred_df=batch_sector_rotation_learning(rank_df, focus_tlist=focus_etf_tlist, th=th, rticker=rticker,
+                                                              def_pct_stop=def_pct_stop, feat_cols=feat_cols)
+    ret_dict={}
+
+    return  all_perf_table, all_trades_df, pred_df
 
 
 def run_etf_test(th=0.10,def_pct_stop=0.1, mkt='usa', focus_tlist=['TMF'], rticker='SPY', heatmap_fname='yf_hm.jpg'):
@@ -304,6 +347,8 @@ def update_data(ticker_group='us_etf'):
     tlist_dict['us_etf']=get_us_etf_list()
     tlist_dict['fx_tlist']=get_fx_ticker_list()
     tlist_dict['dukas_fx_tlist']=get_dukas_fx_ticker_list()
+    tlist_dict['cmc_crypto']=get_dukas_fx_ticker_list()
+    tlist_dict['lev_etf']=get_lev_etf_list()
     tlist, feat_cols=tlist_dict[ticker_group]
     full_list=list(tlist)+list(feat_cols)
     for ticker in full_list:

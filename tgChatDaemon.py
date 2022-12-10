@@ -14,7 +14,14 @@ from tkinter import *
 import socket
 import gzip,pickle,os,sys,time,base64
 
+''' run jobs that show up in the rabbitmq with queue name {qname} '''
 def run_job_by_qname_inline(userid, msq, qname='sectorq'):
+    '''
+    sample message is '{userid}|se AAPL' with the second part being the ticker
+    results is than stor in a pickle file with name {qname}/{userid}.se.pkl.gz
+    which is then base64 encoded, posted to rabbitmq and read by the tgbot and sent to the user  
+
+    '''
     cmd=msq.split(' ')[0]
     cmd='se'
     ticker=msq.split(' ')[1]
@@ -31,8 +38,9 @@ def run_job_by_qname_inline(userid, msq, qname='sectorq'):
     
     return pkl_fname
 
-
-def sample_router(msg, job_dict=None):                                                                                                                                      
+'''redirect commeand to different message queues based on the first word of the message'''
+def sample_router(msg, job_dict=None):                                                    
+                                                                                      
     job_dict
     default_qname='jobq'
     if job_dict is None:

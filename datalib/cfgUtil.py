@@ -2,7 +2,13 @@ import configparser
 
 def get_token_input():
     cfg_fname=r"configfile.ini"
-    token=input('please input tg token from /botFather')
+    token=input('please input tg token from /botFather e.g., 0123456789:AAABBBCCCDDDEEEFFFGGGHHHIIIJJJKKKLLLMMMNNNOOO')
+    ### regex to check telegram token
+    import re
+    if not re.match(r'^\d{10}:[A-Za-z0-9_-]{35}$', token):
+        print('error in token:, should be like 0123456789:AAABBBCCCDDDEEEFFFGGGHHHIIIJJJKKKLLLMMMNNNOOO')
+        return None
+
     config = configparser.ConfigParser()
     # Add the structure to the file we will create
     config.add_section('telegram')
