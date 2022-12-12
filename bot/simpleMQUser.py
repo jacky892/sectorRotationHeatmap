@@ -15,6 +15,10 @@ class simpleMQUser:
 
         connection = pika.BlockingConnection(pika.ConnectionParameters(rbmq_ip, credentials=credentials))
         channel = connection.channel()
+        try:
+            channel.queue_declare(queue=qname, durable=True)
+        except Exception as e:
+            print(f'declaring qname {qname} ex',e )
         return channel
 
     @staticmethod
