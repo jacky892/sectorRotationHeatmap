@@ -289,7 +289,7 @@ def extract_pred_table_for_sector_rotation(all_pred_df, ticker):
         return None, f'no suggestion for ticker {ticker}'
     import dataframe_image as dfi
     ofname=f'{ticker}_pred_df.jpg'
-    dfi.export(_send_df, ofname)
+    dfi.export(_send_df, ofname, table_conversion='matplotlib')
     return _send_df, ofname
 
 

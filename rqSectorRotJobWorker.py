@@ -24,7 +24,7 @@ def run_job_by_qname_inline(qmsg, qname='sectorq'):
     else:
         send_df, ofname=srt.extract_pred_table_for_sector_rotation(pred_df, ticker)
         save_dict['send_df']=send_df
-        save_dict['img_list']=[ofname]
+        save_dict['img_list']=[ofname, 'xhm.jpg']
         save_dict['qmsg']=qmsg
         save_dict['userid']=userid
     pkl_fname=f'{qname}/{userid}.{cmd}.pkl.gz'

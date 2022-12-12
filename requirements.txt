@@ -47,3 +47,5 @@ cryptocmd
 dataframe_image
 jinja2==3.0.3
 nbconvert==6.4.4
+pika
+pyTelegramBotAPI
