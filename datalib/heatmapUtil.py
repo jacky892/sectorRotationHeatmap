@@ -84,7 +84,7 @@ def get_time_matrix_ranked(time_matrix_df):
     rank_df=pd.DataFrame().from_dict(all_rows, orient='columns')
     return rank_df.T.copy()
 
-def get_rel_nday_ma_zscore_heatmap(tlist, list_tag='rank_sector_etf', startdate='20140101', nday=5, use_rank=False, zdays=20, skip_cnt=5, pred_date=None,  imgofname=None):
+def get_rel_nday_ma_zscore_heatmap(tlist, focus=None, list_tag='rank_sector_etf', startdate='20140101', nday=5, use_rank=False, zdays=20, skip_cnt=5, pred_date=None,  imgofname=None):
     all_dict={}
     print(tlist)
     for t in tlist:
@@ -100,10 +100,10 @@ def get_rel_nday_ma_zscore_heatmap(tlist, list_tag='rank_sector_etf', startdate=
     if use_rank:
         big_matrix_df=get_time_matrix_ranked(big_matrix_df)
     showtable(big_matrix_df.tail())
-    heatmapUtil.time_matrix_as_heatmap(big_matrix_df, skip_cnt=skip_cnt, view_cnt=30,  imgofname=imgofname)
+    heatmapUtil.time_matrix_as_heatmap(big_matrix_df, focus=focus, skip_cnt=skip_cnt, view_cnt=30,  imgofname=imgofname)
     return big_matrix_df
 
-def get_ret_zscore_heatmap(tlist, list_tag='rank_sector_etf', startdate='20140101', interval=5, use_rank=False, zdays=20, skip_cnt=5,  imgofname=None):
+def get_ret_zscore_heatmap(tlist, list_tag='rank_sector_etf', startdate='20140101', interval=5, focus=None, use_rank=False, zdays=20, skip_cnt=5,  imgofname=None):
     all_dict={}
     print(tlist)
     for t in tlist:
