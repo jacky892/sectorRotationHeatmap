@@ -5,7 +5,7 @@ import dataframe_image as dfi
 
 class heatmapUtil:
     @staticmethod
-    def time_matrix_as_heatmap(time_matrix_df, skip_cnt=10, view_cnt=30, imgofname=None, focus=None):
+    def time_matrix_as_heatmap(time_matrix_df, focus=None, skip_cnt=10, view_cnt=30, imgofname=None, focus=None):
         '''
         trim and sample a multi columns time series table and present as heatmap over typlej
         Keyword arguments:
@@ -30,7 +30,7 @@ class heatmapUtil:
                 dfi.export(styler, imgofname, table_conversion='chrome')
             except:
                 dfi.export(styler, imgofname, table_conversion='matplotlib')
-            render_heatmap_with_seaborn(time_matrix_df, focus='IWM', skip=2, ofname=imgofname)
+            render_heatmap_with_seaborn(time_matrix_df, focus=focus, skip=2, ofname=imgofname)
 
         return styler
 
@@ -117,7 +117,7 @@ def get_ret_zscore_heatmap(tlist, list_tag='rank_sector_etf', startdate='2014010
     if use_rank:
         big_matrix_df=get_time_matrix_ranked(big_matrix_df)
     dlog(big_matrix_df.tail())
-    heatmapUtil.time_matrix_as_heatmap(big_matrix_df, skip_cnt=skip_cnt, view_cnt=30, imgofname=imgofname)
+    heatmapUtil.time_matrix_as_heatmap(big_matrix_df, skip_cnt=skip_cnt, focus=focus, view_cnt=30, imgofname=imgofname)
     return big_matrix_df
 
 def render_heatmap_with_seaborn(rank_df, pdf=None, focus='META', ofname='snshm.jpg', skip=2, row_cnt=100):
