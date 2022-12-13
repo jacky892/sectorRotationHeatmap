@@ -5,7 +5,7 @@ import dataframe_image as dfi
 
 class heatmapUtil:
     @staticmethod
-    def time_matrix_as_heatmap(time_matrix_df, skip_cnt=10, view_cnt=30, imgofname=None):
+    def time_matrix_as_heatmap(time_matrix_df, skip_cnt=10, view_cnt=30, imgofname=None, focus=None):
         '''
         trim and sample a multi columns time series table and present as heatmap over typlej
         Keyword arguments:
@@ -30,6 +30,7 @@ class heatmapUtil:
                 dfi.export(styler, imgofname, table_conversion='chrome')
             except:
                 dfi.export(styler, imgofname, table_conversion='matplotlib')
+            render_heatmap_with_seaborn(time_matrix_df, focus='IWM', skip=2, ofname=imgofname)
 
         return styler
 
@@ -119,3 +120,41 @@ def get_ret_zscore_heatmap(tlist, list_tag='rank_sector_etf', startdate='2014010
     heatmapUtil.time_matrix_as_heatmap(big_matrix_df, skip_cnt=skip_cnt, view_cnt=30, imgofname=imgofname)
     return big_matrix_df
 
+def render_heatmap_with_seaborn(rank_df, pdf=None, focus='META', ofname='snshm.jpg', skip=2, row_cnt=100):
+    from datalib.commonUtil import commonUtil as cu
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    import pandas_ta
+
+    idx=rank_df.iloc[-row_cnt:].index[::skip]
+    if not focus is None:
+        pdf=cu.read_quote(focus)        
+        pdf['hma20']=pdf.ta.hma(20)    
+        pdf['hma40']=pdf.ta.hma(40)    
+        scaler=pdf.Volume.max()/pdf.Close.max()
+        pdf['volumec']=pdf.Volume*scaler/2
+
+        subdf=pdf.loc[idx[0]:]
+    t_order2=list(rank_df.iloc[-1].sort_values(ascending=False).index)
+    t_order=t_order2
+    if focus in t_order2:
+        t_order2.remove(focus)
+        t_order=[focus]+t_order2
+    x_labels=[' ']*len(idx)
+    x_labels[::4]=[v.strftime('%Y%m%d') for v in list(idx)[::4]]
+    if pdf is None:
+        fig, ax_list = plt.subplots(1, 1, sharex=False, figsize=(16,10))
+        sns.heatmap(rank_df[t_order].loc[idx].T, xticklabels=x_labels, ax=ax_list, cbar=False)
+        
+    else:
+        fig, ax_list = plt.subplots(2, 1, sharex=False, figsize=(16,10), gridspec_kw={'height_ratios': [1, 4]})
+        sns.heatmap(rank_df[t_order].loc[idx].T, xticklabels=x_labels, ax=ax_list[1], cbar=False)
+        plt.subplots_adjust(wspace=0.05, hspace=0.01)
+        data=subdf
+        cols=['Close','hma20', 'hma40']
+        sns.lineplot(data=subdf[cols], ax=ax_list[0])   
+    #    sns.barplot(data=subdf['Volume'], ax=ax_list[0])
+#        sns.barplot(data=subdf['volumec'], ax=ax_list[0])
+
+    plt.savefig(ofname)
+    return ofname
