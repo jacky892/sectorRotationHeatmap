@@ -93,7 +93,8 @@ def pickle_output_dict_with_img(obj_dict, pklfname='ref_userid.pkl.gz', get_b64=
 
     for imgfname in img_list:      
         print('reading image ',imgfname)
-        save_dict['img_obj'].append(Image.open(imgfname))
+        if '.jpg' in imgfname or '.png' in imgfname:
+            save_dict['img_obj'].append(Image.open(imgfname))
     print(save_dict)
     dirname=os.path.dirname(pklfname)
     if not os.path.exists(dirname) and len(dirname)>1:
@@ -208,16 +209,15 @@ def read_yf_quote(ticker, pred_date=None):
         return df
     return df.loc[:pred_date]
 
+def trim_img(im):
+    bg = Image.new(im.mode, im.size, im.getpixel((0,0)))
+    diff = ImageChops.difference(im, bg)
+    diff = ImageChops.add(diff, diff, 2.0, -100)
+    bbox = diff.getbbox()
+    if bbox:
+        return im.crop(bbox)
 
 def show_image(fname, show=True, trim=False):
-
-    def trim_img(im):
-        bg = Image.new(im.mode, im.size, im.getpixel((0,0)))
-        diff = ImageChops.difference(im, bg)
-        diff = ImageChops.add(diff, diff, 2.0, -100)
-        bbox = diff.getbbox()
-        if bbox:
-            return im.crop(bbox)
 
     def show_img(fname, show, trim):
         from IPython.display import Image

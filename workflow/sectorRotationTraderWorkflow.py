@@ -12,7 +12,7 @@ def get_cmc_crypto_tlist()->tuple:
     return fx_tlist, feat_cols
 
 def get_dukas_fx_ticker_list()->tuple:
-    fx_tlist=['eurcad', 'gbpusd', 'nzdusd', 'audusd', 'audnzd', 'usdjpy', 'usdchf', 'usdcad',  'usdsgd', 'eurchf', 'eurusd']
+    fx_tlist=['eurcad', 'gbpusd', 'nzdusd', 'audusd', 'audnzd', 'usdjpy', 'usdchf', 'usdcad',  'usdsgd', 'eurchf', 'eurusd', 'xauusd', 'eurgbp']
     #feat_cols=['eurcad', 'audnzd', 'eurgbp', 'xauusd']
     feat_cols=['eurcad', 'audnzd', 'eurgbp', 'usdjpy', 'usdchf', 'usdcad', 'eurusd', 'xauusd']
     return fx_tlist, feat_cols
@@ -32,7 +32,7 @@ def get_fx_ticker_list()->tuple:
 def get_us_etf_list()->tuple:
     #    ew_sector_etf_list=['RCD', 'RYH', 'RYT', 'RGI', 'RHS', 'RTM', 'RYF', 'ROOF', 'RSP', 'RYE', 'EQAL', 'EWRE', 'QQEW', 'XBI', 'XAR', 'ROBO','TLT', 'EMLC', 'EEM', 'CURE', 'VXX', 'REM']
     ew_sector_etf_list=['RCD', 'RYH', 'RYT', 'RGI', 'RHS', 'RTM', 'RYF', 'RSP', 'RYE', 'RYU', 'EQAL', 'EWRE', 'QQEW', 'TLT', 'EMLC', 'EEM', 'SPY']
-    feat_cols=['TLT', 'EQAL', 'RYF', 'EMLC', 'EWRE', 'RTM', 'RYE', 'EEM', 'RYT', 'RYU', 'RHS', 'TMF' ]
+    feat_cols=['TLT', 'EQAL', 'RYF', 'EMLC', 'EWRE', 'RTM', 'RYE', 'EEM', 'RYT', 'RYU', 'RHS' ]
     return ew_sector_etf_list, feat_cols
 
 def get_jp_etf_list()->tuple:
@@ -202,7 +202,7 @@ def run_forex_worflow(pred_date=None, use_dukas=False, focus_tlist=None, heatmap
            focus_tlist=['YCL', 'ULE']
         rticker='UUP'    
         skip_cnt=5
-        cu.download_yf_quote(rticker)
+        cu.download_quote(rticker)
         th=0.03
         def_pct_stop=0.05
         
@@ -293,7 +293,7 @@ def extract_pred_table_for_sector_rotation(all_pred_df, ticker):
     return _send_df, ofname
 
 
-def run_chatbot_sector_pred_for_ticker(focus_ticker):
+def run_chatbot_sector_pred_for_ticker(focus_ticker, peer='etf'):
     from datalib.heatmapUtil import get_rel_nday_ma_zscore_heatmap
     from workflow.sectorRotationTraderWorkflow import batch_sector_rotation_learning
     from backtest.chandelierExitBacktester import chandelierExitBacktester, backtest_between, get_long_max_drawdown_details
@@ -302,23 +302,41 @@ def run_chatbot_sector_pred_for_ticker(focus_ticker):
     import pandas_ta as ta
     ew_sector_etf_list=['RCD', 'RYH', 'RYT', 'RGI', 'RHS', 'RTM', 'RYF', 'RSP', 'RYE', 'RYU', 'EQAL', 'EWRE', 'QQEW', 'TLT', 'EMLC', 'EEM' ]
     feat_cols=['TLT', 'EQAL', 'RYF', 'EMLC', 'EWRE', 'RTM', 'RYE', 'EEM', 'RYT', 'RYU', 'RHS']  
+
+    peer_feat_dict={}
+    peer_hm_dict={}
+    rticker_dict={}
+    th_dict={}
+    th_dict['etf']=0.05
+    th_dict['cmc']=0.08    
+    th_dict['fx']=0.012        
+    rticker_dict['etf']='IWV'
+    rticker_dict['cmc']='BCH=C'    
+#    rticker_dict['fx']='USDCHF=X'        
+    rticker_dict['fx']='usdchf'        
+    peer_hm_dict['etf'],peer_feat_dict['etf']=get_us_etf_list()
+    peer_hm_dict['fx'],peer_feat_dict['fx']=get_dukas_fx_ticker_list()
+    peer_hm_dict['cmc'],peer_feat_dict['cmc']=get_cmc_crypto_tlist()
+    rticker=rticker_dict[peer]
     
-    tlist=ew_sector_etf_list.copy()
+    tlist=peer_hm_dict[peer]
     tlist.append(focus_ticker)
-    
-    th=0.05
-    def_pct_stop=0.05
-    rticker='IWV'
-    cu.download_yf_quote(rticker)
+    feat_cols=peer_feat_dict[peer]
+    rticker=rticker_dict[peer]
+
+    th=th_dict[peer]
+    def_pct_stop=th
+    skip_cnt=6
+    cu.download_quote(rticker)
     feat_cols.append(focus_ticker)
     feat_cols=list(set(feat_cols))
-    focus_tlist=[focus_ticker]    
-#    cu.download_yf_quote(rticker)    
-    for t in list(set(feat_cols+ew_sector_etf_list+focus_tlist)):
-        cu.download_yf_quote(t)
-    rank_df=get_rel_nday_ma_zscore_heatmap(tlist, list_tag='rank_sector_etf', use_rank=True, zdays=0, pred_date=None, imgofname='xhm.jpg')
+    focus_tlist=[focus_ticker]
+    for t in list(set(feat_cols+tlist+[rticker])):
+        print('XxXXXXXXXXXXXXXXX downloading data ', t)
+        cu.download_quote(t)
+    
+    rank_df=get_rel_nday_ma_zscore_heatmap(tlist, focus=focus_ticker, list_tag=f'rank_{peer}', use_rank=True, zdays=0, pred_date=None, imgofname='xhm.jpg', skip_cnt=skip_cnt) 
 
-    #feat_cols=fx_tlist
     print(rank_df.tail())
     all_perf_table, all_trades_df, all_pred_df=batch_sector_rotation_learning(rank_df, focus_tlist=focus_tlist, th=th, rticker=rticker,
                                                               def_pct_stop=def_pct_stop, feat_cols=feat_cols)
@@ -327,8 +345,8 @@ def run_chatbot_sector_pred_for_ticker(focus_ticker):
 
 class sectorRotationTraderWorkflow:
     @staticmethod
-    def run_chatbot_sector_pred_for_ticker(focus_ticker):
-        return  run_chatbot_sector_pred_for_ticker(focus_ticker)
+    def run_chatbot_sector_pred_for_ticker(focus_ticker, peer='etf'):
+        return  run_chatbot_sector_pred_for_ticker(focus_ticker, peer)
 
     @staticmethod
     def extract_pred_table_for_sector_rotation(all_pred_df, ticker):
@@ -352,12 +370,7 @@ def update_data(ticker_group='us_etf'):
     tlist, feat_cols=tlist_dict[ticker_group]
     full_list=list(tlist)+list(feat_cols)
     for ticker in full_list:
-        if not ticker==ticker.lower():
-            print('download using yfinance')
-            cu.download_yf_quote(ticker)
-        else:
-            print(f'download using npx dukascopy for {ticker}')
-            cu.download_quote(ticker)
+        cu.download_quote(ticker)
 
 
 

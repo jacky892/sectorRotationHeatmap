@@ -5,7 +5,7 @@ import dataframe_image as dfi
 
 class heatmapUtil:
     @staticmethod
-    def time_matrix_as_heatmap(time_matrix_df, focus=None, skip_cnt=10, view_cnt=30, imgofname=None, focus=None):
+    def time_matrix_as_heatmap(time_matrix_df, skip_cnt=10, view_cnt=30, imgofname=None, focus=None):
         '''
         trim and sample a multi columns time series table and present as heatmap over typlej
         Keyword arguments:
@@ -56,6 +56,7 @@ class heatmapUtil:
         keep_col=list(heat_df.columns)[-max_cols:]
         sort_col=list(heat_df.columns)[-1]
         if sort_latest:
+            print('tail:',heat_df.tail())
             heat_df.sort_values(by=sort_col, ascending=False, inplace=True)
         return round_heat_df(heat_df[keep_col])
 
@@ -152,6 +153,7 @@ def render_heatmap_with_seaborn(rank_df, pdf=None, focus='META', ofname='snshm.j
         plt.subplots_adjust(wspace=0.05, hspace=0.01)
         data=subdf
         cols=['Close','hma20', 'hma40']
+        ax_list[0].set_xlim(idx[0], idx[-1])
         sns.lineplot(data=subdf[cols], ax=ax_list[0])   
     #    sns.barplot(data=subdf['Volume'], ax=ax_list[0])
 #        sns.barplot(data=subdf['volumec'], ax=ax_list[0])

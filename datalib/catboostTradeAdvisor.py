@@ -400,6 +400,7 @@ class catboostTradeAdvisor:
 #        pred_df=ret_dict['pred_df']
         all_row_dict=defaultdict()
         all_pred_df_list=[]
+        all_pred_df=[]
         all_trades_df_list=[]
         all_perf_table=None
         all_trades_df=None

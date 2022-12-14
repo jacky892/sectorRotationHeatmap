@@ -8,11 +8,16 @@ matplotlib.use('TkAgg')
 import multiprocessing
 import time
 import random
+from PIL import Image, ImageChops
 from tkinter import *
 
 
 import socket
 import gzip,pickle,os,sys,time,base64
+
+def get_help_message():
+    help_msg='to get vcp plot: v AAPL, v CBA.ax, v ETH=C, v AUDUSD=X\n to get sector heatmap: se XLF, se CBA.ax, sc ETH=C, sf AUDUSD=X"
+    return help_msg
 
 ''' run jobs that show up in the rabbitmq with queue name {qname} '''
 def run_job_by_qname_inline(userid, msq, qname='sectorq'):
@@ -23,11 +28,18 @@ def run_job_by_qname_inline(userid, msq, qname='sectorq'):
 
     '''
     cmd=msq.split(' ')[0]
-    cmd='se'
     ticker=msq.split(' ')[1]
+    subcmd='e'
+    if len(cmd)>1:
+        subcmd=cmd[1]
+    peer_dict={}
+    peer_dict['e']='etf'
+    peer_dict['c']='cmc'
+    peer_dict['f']='fx'
+    peer=peer_dict[subcmd]
     from datalib.commonUtil import commonUtil as cu
     from workflow.sectorRotationTraderWorkflow import sectorRotationTraderWorkflow as srt
-    perf_df, trade_df, pred_df=srt.run_chatbot_sector_pred_for_ticker(ticker)
+    perf_df, trade_df, pred_df=srt.run_chatbot_sector_pred_for_ticker(ticker,peer)
     send_df, ofname=srt.extract_pred_table_for_sector_rotation(pred_df, ticker)
     save_dict={}
     save_dict['send_df']=send_df
@@ -137,6 +149,12 @@ def reply_tg_func(tgbot, obj):
         img_list=obj['img_obj']
         for im in img_list:
             ofname=f'tmp/{cnt}.png'
+            bg = Image.new(im.mode, im.size, im.getpixel((0,0)))
+            diff = ImageChops.difference(im, bg)
+            diff = ImageChops.add(diff, diff, 2.0, -100)
+            bbox = diff.getbbox()
+            if bbox:
+                im=im.crop(bbox)
             im.save(ofname)
             tgbot.send_photo(userid, photo=open(ofname, 'rb'))
     msg_txt=''
@@ -178,7 +196,11 @@ def main_run():
             tgbot.reply_to(message, f'unauthorized user {username}')
             return
         print('from_user:',message.from_user)
-        tgbot.reply_to(message, f'u{userid} {username} %s ' % message.text)
+        if 'help' in message.text.lower():
+            msg=get_help_message()
+            tgbot.reply_to(message, msg)
+        else:
+            tgbot.reply_to(message, f'u{userid} {username} %s ' % message.text)
         msg=message.text.strip()
         print('got message:', '%s %s' % (hostname, msg))
         if router_func is None:

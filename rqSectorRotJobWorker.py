@@ -8,13 +8,20 @@ def run_job_by_qname_inline(qmsg, qname='sectorq'):
     userid=qmsg.split('|')[0]
     msg=qmsg.split('|')[1]
     cmd=msg.split(' ')[0]
-    cmd='se'
+    subcmd='e'
+    if len(cmd)>1:
+        subcmd=cmd[1]
+    peer_dict={}
+    peer_dict['e']='etf'
+    peer_dict['c']='cmc'
+    peer_dict['f']='fx'
+    peer=peer_dict[subcmd]
     ticker=msg.split(' ')[1]
     ticker=ticker.strip()
-    print(f'focus ticker is x{ticker}')
+    print(f'focus ticker is x{ticker} {qmsg}')
     from datalib.commonUtil import commonUtil as cu
     from workflow.sectorRotationTraderWorkflow import sectorRotationTraderWorkflow as srt
-    perf_df, trade_df, pred_df=srt.run_chatbot_sector_pred_for_ticker(ticker)
+    perf_df, trade_df, pred_df=srt.run_chatbot_sector_pred_for_ticker(ticker, peer)
     print('returned perf_df',perf_df)
     print('pred_df ',pred_df)
     save_dict={}

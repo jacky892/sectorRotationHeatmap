@@ -211,6 +211,9 @@ def backtest_between(entry_date, exit_date, price_df, rprice_df, trade_type='lon
     
     #dlog(f'#backtest_between {price_df.index[-1]}, {exit_date}, {len(price_df)}, {extra_info_dict}')
     import pandas as pd
+    price_df['_date']=price_df.index
+    rprice_df['_date']=rprice_df.index
+    rprice_df=pd.merge(rprice_df, price_df['_date'], right_index=True, left_index=True, how='outer').ffill()
     idx=(price_df.index>=entry_date)
     _=price_df[idx]
     if len(_)==0:
@@ -236,8 +239,9 @@ def backtest_between(entry_date, exit_date, price_df, rprice_df, trade_type='lon
         return None
     rsubdf=rprice_df[entry_date:exit_date_lag].copy()
     if len(rsubdf)==0:
-        dlog(f'rprice_df not updated compared with price_df {extra_info_dict, len(rsubdf)}')
-        raise Exception("rprice_df not updated")
+        dlog(f'rprice_df not updated compared with price_df {extra_info_dict, len(rsubdf)}, rprice_df at {rprice_df.index[-1]} vs {exit_date_lag}')
+        ridx=rprice_df.index
+        raise Exception(f"rprice_df not updated {rprice_df.index[-1]} vs {entry_date} to  {exit_date_lag} {rprice_df.shape}, {rprice_df.tail(2)}, {type(_.index[-1])}, {type(ridx[-1])}")
         return None
 
 #        price_pct_diff=(subdf.Close[-1]-subdf.Close[0])/subdf.Close[0]
